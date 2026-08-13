@@ -1,0 +1,74 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import nodemailer, { Transporter } from 'nodemailer';
+
+interface SendMailOptions {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}
+
+@Injectable()
+export class MailService {
+  private readonly logger = new Logger(MailService.name);
+  private readonly transporter: Transporter | null;
+  private readonly from: string;
+
+  constructor(private readonly config: ConfigService) {
+    const host = this.config.get<string>('SMTP_HOST');
+    this.from = this.config.get<string>('SMTP_FROM') ?? 'Customer Support Portal <no-reply@example.com>';
+
+    if (host) {
+      this.transporter = nodemailer.createTransport({
+        host,
+        port: this.config.get<number>('SMTP_PORT') ?? 587,
+        auth: this.config.get<string>('SMTP_USER')
+          ? {
+              user: this.config.get<string>('SMTP_USER'),
+              pass: this.config.get<string>('SMTP_PASS'),
+            }
+          : undefined,
+      });
+    } else {
+      // No SMTP configured: fall back to a development-safe mechanism that
+      // logs the email instead of silently pretending it was delivered.
+      this.transporter = null;
+    }
+  }
+
+  async sendMail(options: SendMailOptions): Promise<void> {
+    if (!this.transporter) {
+      this.logger.warn(
+        `[DEV EMAIL - SMTP not configured] To: ${options.to} | Subject: ${options.subject}\n${options.text}`,
+      );
+      return;
+    }
+
+    await this.transporter.sendMail({
+      from: this.from,
+      to: options.to,
+      subject: options.subject,
+      text: options.text,
+      html: options.html,
+    });
+  }
+
+  async sendVerificationEmail(to: string, verificationUrl: string): Promise<void> {
+    await this.sendMail({
+      to,
+      subject: 'Verify your email address',
+      text: `Welcome! Please verify your email by visiting: ${verificationUrl}`,
+      html: `<p>Welcome! Please verify your email by clicking the link below:</p><p><a href="${verificationUrl}">${verificationUrl}</a></p>`,
+    });
+  }
+
+  async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
+    await this.sendMail({
+      to,
+      subject: 'Reset your password',
+      text: `We received a request to reset your password. Visit: ${resetUrl}\nIf you did not request this, you can ignore this email.`,
+      html: `<p>We received a request to reset your password.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can ignore this email.</p>`,
+    });
+  }
+}

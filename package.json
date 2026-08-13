@@ -1,0 +1,24 @@
+{
+  "name": "customer-support-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-Tenant Client Feedback & Support Portal (Phase 1: Foundation & Auth)",
+  "scripts": {
+    "build:shared": "pnpm --filter @app/shared build",
+    "dev:auth-service": "pnpm run build:shared && pnpm --filter auth-service start:dev",
+    "dev:gateway": "pnpm run build:shared && pnpm --filter gateway start:dev",
+    "dev:tenant": "pnpm --filter tenant dev",
+    "dev:backend": "pnpm run build:shared && concurrently -n auth-service,gateway -c yellow,cyan \"pnpm:dev:auth-service\" \"pnpm:dev:gateway\"",
+    "dev": "pnpm run build:shared && concurrently -n auth-service,gateway,tenant -c yellow,cyan,magenta \"pnpm:dev:auth-service\" \"pnpm:dev:gateway\" \"pnpm:dev:tenant\"",
+    "build:auth-service": "pnpm --filter auth-service build",
+    "build:gateway": "pnpm --filter gateway build",
+    "build:tenant": "pnpm --filter tenant build",
+    "build": "pnpm run build:shared && pnpm run build:auth-service && pnpm run build:gateway && pnpm run build:tenant",
+    "test:auth-service": "pnpm --filter auth-service test",
+    "prisma:generate": "pnpm --filter auth-service prisma:generate",
+    "prisma:migrate": "pnpm --filter auth-service prisma:migrate"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
+  }
+}

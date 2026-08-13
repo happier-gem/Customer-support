@@ -1,0 +1,19 @@
+{
+  "name": "@app/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Types, DTOs, and constants shared across services and apps in the monorepo",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "class-validator": "^0.14.1"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.2"
+  }
+}
