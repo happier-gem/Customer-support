@@ -4,5 +4,8 @@ export * from './dto/verify-email.dto';
 export * from './dto/forgot-password.dto';
 export * from './dto/reset-password.dto';
 export * from './dto/refresh-token.dto';
+export * from './dto/update-organization.dto';
 export * from './constants/message-patterns';
+export * from './constants/roles';
 export * from './interfaces/auth.interface';
+export * from './interfaces/organization.interface';

@@ -26,6 +26,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Invalid token');
     }
 
+    // Defense-in-depth: a token missing tenant/role context must never reach
+    // a controller — every downstream authorization decision (RolesGuard,
+    // tenant-scoped RPC calls) assumes these claims are present and trustworthy.
+    if (!payload.sub || !payload.organizationId || !payload.role) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
     return {
       userId: payload.sub,
       email: payload.email,

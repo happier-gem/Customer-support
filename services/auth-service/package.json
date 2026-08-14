@@ -55,6 +55,7 @@
     "moduleFileExtensions": ["js", "json", "ts"],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "maxWorkers": 1,
     "transform": { "^.+\\.(t|j)s$": "ts-jest" },
     "moduleNameMapper": {
       "^@app/shared$": "<rootDir>/../../../packages/shared/src",

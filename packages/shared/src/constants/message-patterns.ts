@@ -11,3 +11,10 @@ export const AUTH_PATTERNS = {
 } as const;
 
 export const AUTH_SERVICE_CLIENT = 'AUTH_SERVICE_CLIENT';
+
+/** TCP message patterns for organization (tenant) operations, served by the auth-service. */
+export const ORG_PATTERNS = {
+  GET_BY_ID: 'org.get-by-id',
+  LIST: 'org.list',
+  UPDATE: 'org.update',
+} as const;
