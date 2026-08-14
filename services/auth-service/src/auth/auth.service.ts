@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -14,11 +15,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import {
   RegisterDto,
+  RegisterCustomerDto,
   LoginDto,
   VerifyEmailDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   PublicUser,
+  ROLES,
   TokenPair,
 } from '@app/shared';
 import { generateSecureToken, hashToken, safeCompareHex } from './utils/token.util';
@@ -137,6 +140,62 @@ export class AuthService {
     return {
       message: 'Registration successful. Please check your email to verify your account.',
       organizationId,
+      userId,
+    };
+  }
+
+  /**
+   * Public customer self-signup for an *existing* organization's support
+   * portal — unlike register(), this never creates a new organization, and
+   * the created account's role is always CUSTOMER, hardcoded here rather
+   * than accepted from the client.
+   */
+  async registerCustomer(dto: RegisterCustomerDto): Promise<{ message: string; organizationId: string; userId: string }> {
+    const email = dto.email.trim().toLowerCase();
+
+    const organization = await this.prisma.organization.findUnique({ where: { id: dto.organizationId } });
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new ConflictException('An account with this email already exists');
+    }
+
+    const passwordHash = await argon2.hash(dto.password);
+    const verificationToken = generateSecureToken();
+    const verificationTokenHash = hashToken(verificationToken);
+    const expiresInMinutes = Number(this.config.get<string>('EMAIL_VERIFICATION_EXPIRES_IN_MINUTES') ?? 60);
+    const emailVerificationExpiresAt = new Date(Date.now() + expiresInMinutes * 60_000);
+
+    let userId: string;
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          organizationId: organization.id,
+          name: dto.name.trim(),
+          email,
+          passwordHash,
+          role: ROLES.CUSTOMER,
+          emailVerificationTokenHash: verificationTokenHash,
+          emailVerificationExpiresAt,
+        },
+      });
+      userId = user.id;
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException('An account with this email already exists');
+      }
+      throw err;
+    }
+
+    const verificationUrl = `${this.config.get<string>('FRONTEND_URL')}/verify-email?token=${verificationToken}`;
+    await this.mail.sendVerificationEmail(email, verificationUrl);
+
+    return {
+      message: 'Registration successful. Please check your email to verify your account.',
+      organizationId: organization.id,
       userId,
     };
   }

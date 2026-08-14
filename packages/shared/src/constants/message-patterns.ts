@@ -1,6 +1,7 @@
 /** TCP message patterns shared between the gateway and the auth-service microservice. */
 export const AUTH_PATTERNS = {
   REGISTER: 'auth.register',
+  REGISTER_CUSTOMER: 'auth.register-customer',
   VERIFY_EMAIL: 'auth.verify-email',
   LOGIN: 'auth.login',
   REFRESH: 'auth.refresh',
@@ -33,4 +34,18 @@ export const INVITATION_PATTERNS = {
   LIST: 'invitations.list',
   VALIDATE: 'invitations.validate',
   ACCEPT: 'invitations.accept',
+} as const;
+
+/** TCP message patterns for the Phase 4 ticketing system, served by the auth-service. */
+export const TICKET_PATTERNS = {
+  CREATE: 'tickets.create',
+  LIST: 'tickets.list',
+  GET_BY_ID: 'tickets.get-by-id',
+  UPDATE: 'tickets.update',
+  UPDATE_STATUS: 'tickets.update-status',
+  ASSIGN: 'tickets.assign',
+  ASSIGN_SELF: 'tickets.assign-self',
+  HISTORY: 'tickets.history',
+  CREATE_ATTACHMENT: 'tickets.attachments.create',
+  GET_ATTACHMENT: 'tickets.attachments.get',
 } as const;

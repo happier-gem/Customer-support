@@ -89,6 +89,88 @@ export interface InvitationPreview {
   expiresAt: string;
 }
 
+export type TicketStatus = "OPEN" | "IN_PROGRESS" | "WAITING_FOR_CUSTOMER" | "RESOLVED" | "CLOSED";
+export type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+/** Mirrors packages/shared/src/constants/ticket.ts TICKET_STATUS_TRANSITIONS, kept in sync manually per this app's no-shared-import convention. */
+export const NEXT_STATUSES: Record<TicketStatus, TicketStatus[]> = {
+  OPEN: ["IN_PROGRESS"],
+  IN_PROGRESS: ["WAITING_FOR_CUSTOMER", "RESOLVED"],
+  WAITING_FOR_CUSTOMER: ["IN_PROGRESS", "RESOLVED"],
+  RESOLVED: ["CLOSED", "IN_PROGRESS"],
+  CLOSED: [],
+};
+
+export interface TicketPerson {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface Ticket {
+  id: string;
+  organizationId: string;
+  title: string;
+  description: string;
+  priority: TicketPriority;
+  status: TicketStatus;
+  customer: TicketPerson;
+  assignedAgent: TicketPerson | null;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  closedAt: string | null;
+}
+
+export interface TicketAttachment {
+  id: string;
+  ticketId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  uploadedBy: TicketPerson;
+  createdAt: string;
+}
+
+export interface TicketHistoryEntry {
+  id: string;
+  ticketId: string;
+  action: string;
+  actor: TicketPerson;
+  previousStatus: TicketStatus | null;
+  newStatus: TicketStatus | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface TicketDetail extends Ticket {
+  attachments: TicketAttachment[];
+  history: TicketHistoryEntry[];
+}
+
+export interface Paginated<T> {
+  data: T[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export interface TicketListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assigneeId?: string;
+}
+
+function buildQuery(params: object): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params as Record<string, string | number | undefined>)) {
+    if (value !== undefined && value !== "") search.set(key, String(value));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
 function authHeader(accessToken: string): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
@@ -185,4 +267,34 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  listTickets: (accessToken: string, params: TicketListParams) =>
+    request<Paginated<Ticket>>(`/tickets${buildQuery(params)}`, { headers: authHeader(accessToken) }),
+
+  getTicket: (accessToken: string, id: string) =>
+    request<TicketDetail>(`/tickets/${encodeURIComponent(id)}`, { headers: authHeader(accessToken) }),
+
+  updateStatus: (accessToken: string, id: string, statusValue: TicketStatus) =>
+    request<Ticket>(`/tickets/${encodeURIComponent(id)}/status`, {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ status: statusValue }),
+    }),
+
+  assignTicket: (accessToken: string, id: string, agentId: string) =>
+    request<Ticket>(`/tickets/${encodeURIComponent(id)}/assign`, {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ agentId }),
+    }),
+
+  uploadTicketAttachment: (accessToken: string, ticketId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<TicketAttachment>(`/tickets/${encodeURIComponent(ticketId)}/attachments`, {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: formData,
+    });
+  },
 };

@@ -1,7 +1,15 @@
 import { Controller, UseFilters } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
-import { AUTH_PATTERNS, RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto } from '@app/shared';
+import {
+  AUTH_PATTERNS,
+  RegisterDto,
+  RegisterCustomerDto,
+  LoginDto,
+  VerifyEmailDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from '@app/shared';
 import { RpcExceptionFilter } from '../common/filters/rpc-exception.filter';
 
 @Controller()
@@ -12,6 +20,11 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.REGISTER)
   register(@Payload() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.REGISTER_CUSTOMER)
+  registerCustomer(@Payload() dto: RegisterCustomerDto) {
+    return this.authService.registerCustomer(dto);
   }
 
   @MessagePattern(AUTH_PATTERNS.VERIFY_EMAIL)

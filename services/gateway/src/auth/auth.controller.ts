@@ -14,6 +14,7 @@ import type { Request, Response } from 'express';
 import {
   AUTH_PATTERNS,
   RegisterDto,
+  RegisterCustomerDto,
   LoginDto,
   VerifyEmailDto,
   ForgotPasswordDto,
@@ -55,6 +56,12 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto) {
     return this.authGateway.send(AUTH_PATTERNS.REGISTER, dto);
+  }
+
+  @Post('register-customer')
+  @HttpCode(HttpStatus.CREATED)
+  async registerCustomer(@Body() dto: RegisterCustomerDto) {
+    return this.authGateway.send(AUTH_PATTERNS.REGISTER_CUSTOMER, dto);
   }
 
   @Post('verify-email')

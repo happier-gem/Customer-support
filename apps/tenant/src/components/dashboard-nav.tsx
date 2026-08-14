@@ -15,7 +15,7 @@ export function DashboardNav() {
 
   if (!user) return null;
 
-  const links = [{ href: "/dashboard", label: "Dashboard" }];
+  const links = [{ href: "/dashboard", label: "Dashboard" }, { href: "/tickets", label: "Tickets" }];
   if (user.role === "TENANT_OWNER") {
     links.push({ href: "/settings/organization", label: "Organization" }, { href: "/settings/team", label: "Team" });
   }

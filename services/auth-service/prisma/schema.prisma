@@ -21,6 +21,7 @@ model Organization {
 
   users       User[]
   invitations Invitation[]
+  tickets     Ticket[]
 
   @@map("organizations")
 }
@@ -63,6 +64,11 @@ model User {
 
   sentInvitations Invitation[] @relation("InvitationInviter")
 
+  ticketsAsCustomer   Ticket[]           @relation("TicketCustomer")
+  ticketsAsAgent      Ticket[]           @relation("TicketAssignedAgent")
+  ticketAttachments   TicketAttachment[]
+  ticketHistoryEvents TicketHistory[]
+
   @@index([organizationId])
   @@index([emailVerificationTokenHash])
   @@index([passwordResetTokenHash])
@@ -101,4 +107,125 @@ model Invitation {
   @@index([organizationId])
   @@index([email])
   @@map("invitations")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketHistoryAction {
+  CREATED
+  ASSIGNED
+  UNASSIGNED
+  STATUS_CHANGED
+  UPDATED
+  ATTACHMENT_ADDED
+}
+
+/// Phase 4: a customer's support ticket, always owned by exactly one
+/// organization. `organizationId` is set once at creation from the caller's
+/// verified auth context and is never re-derived from client input — every
+/// query in TicketsService filters by it.
+model Ticket {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // A User is never actually hard-deleted in this app (team-member removal
+  // soft-deactivates — see User.isActive), so `onDelete: Cascade` here never
+  // fires in production. It exists so that Organization -> User and
+  // Organization -> Ticket -> TicketHistory/TicketAttachment, which both
+  // cascade from the same Organization delete, don't race: without it,
+  // Postgres can attempt to cascade-delete a User before the Ticket-side
+  // cascade has removed the rows that still reference them, violating this
+  // FK. Same reasoning applies to TicketAttachment.uploadedBy and
+  // TicketHistory.actor below.
+  customerId String
+  customer   User   @relation("TicketCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+
+  assignedAgentId String?
+  assignedAgent   User?   @relation("TicketAssignedAgent", fields: [assignedAgentId], references: [id])
+
+  title       String
+  description String
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+  closedAt   DateTime?
+
+  attachments TicketAttachment[]
+  history     TicketHistory[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, priority])
+  @@index([organizationId, assignedAgentId])
+  @@index([organizationId, customerId])
+  @@index([organizationId, createdAt])
+  @@map("tickets")
+}
+
+/// A file attached to a ticket. `storedFileName` is a server-generated,
+/// non-guessable name on disk — the client-supplied `fileName` is display-only
+/// and never used to build a filesystem path (mirrors organizations/logo-upload.config.ts).
+model TicketAttachment {
+  id       String @id @default(uuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  /// Denormalized from the parent ticket so attachment lookups can be
+  /// tenant-scoped directly, without requiring a join for every access check.
+  organizationId String
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  fileName       String
+  storedFileName String
+  mimeType       String
+  size           Int
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([organizationId])
+  @@map("ticket_attachments")
+}
+
+/// Append-only audit trail scoped to a single ticket (not the Phase 8 global
+/// audit log). `organizationId` is denormalized for the same reason as on
+/// TicketAttachment: tenant-scoped history queries without a join.
+model TicketHistory {
+  id       String @id @default(uuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  organizationId String
+
+  actorId String
+  actor   User   @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  action         TicketHistoryAction
+  previousStatus TicketStatus?
+  newStatus      TicketStatus?
+  metadata       Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([organizationId])
+  @@map("ticket_history")
 }

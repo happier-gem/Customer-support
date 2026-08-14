@@ -7,9 +7,11 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { GatewayModule } from './gateway.module';
 import { UPLOADS_DIR } from './organizations/logo-upload.config';
+import { TICKET_ATTACHMENTS_DIR } from './tickets/ticket-attachment-upload.config';
 
 async function bootstrap() {
   mkdirSync(join(UPLOADS_DIR, 'logos'), { recursive: true });
+  mkdirSync(TICKET_ATTACHMENTS_DIR, { recursive: true });
 
   const app = await NestFactory.create<NestExpressApplication>(GatewayModule);
 
