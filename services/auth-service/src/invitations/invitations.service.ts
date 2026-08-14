@@ -7,6 +7,7 @@ import {
   AssignableTeamRole,
   InvitationDto,
   InvitationPreviewDto,
+  NOTIFICATION_TYPES,
   ROLES,
   RpcAuthContext,
 } from '@app/shared';
@@ -14,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { generateSecureToken, hashToken } from '../auth/utils/token.util';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const INVALID_INVITATION_ERROR = 'This invitation link is invalid or has expired.';
 
@@ -35,6 +37,7 @@ export class InvitationsService {
     private readonly mail: MailService,
     private readonly config: ConfigService,
     private readonly subscriptions: SubscriptionsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private get expiresInHours(): number {
@@ -164,7 +167,7 @@ export class InvitationsService {
         // TicketsService.create for why).
         await this.subscriptions.assertCanAddTeamMember(tx, invitation.organizationId);
 
-        await tx.user.create({
+        const newUser = await tx.user.create({
           data: {
             organizationId: invitation.organizationId,
             name: name.trim(),
@@ -184,6 +187,16 @@ export class InvitationsService {
         if (updated.count === 0) {
           throw new BadRequestException(INVALID_INVITATION_ERROR);
         }
+
+        // Step 12: let the inviting tenant owner know their invite landed.
+        await this.notifications.notify(tx, {
+          organizationId: invitation.organizationId,
+          recipientIds: [invitation.invitedBy],
+          type: NOTIFICATION_TYPES.TEAM_INVITATION_ACCEPTED,
+          title: 'Invitation accepted',
+          message: `${newUser.name} has joined your organization.`,
+          invitationId: invitation.id,
+        });
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {

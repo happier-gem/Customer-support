@@ -20,10 +20,41 @@
  * boundary, not a legal/financial cutoff.
  */
 export function startOfCurrentMonthInTimezone(timezone: string, now: Date = new Date()): Date {
+  return startOfMonthInTimezone(timezone, 0, now);
+}
+
+/**
+ * Same UTC-instant construction as {@link startOfCurrentMonthInTimezone}, generalized to
+ * "the 1st of the month `monthsAgo` calendar months before `now`, at local midnight in
+ * `timezone`" — used by analytics (Phase 7) to build the reporting-window boundary and the
+ * per-bucket boundaries for a rolling N-month chart without re-deriving this math.
+ */
+export function startOfMonthInTimezone(timezone: string, monthsAgo: number, now: Date = new Date()): Date {
   const { year, month } = readYearMonth(timezone, now);
-  const naiveUtcMidnight = Date.UTC(year, month - 1, 1, 0, 0, 0, 0);
+  const totalMonthIndex = year * 12 + (month - 1) - monthsAgo;
+  const targetYear = Math.floor(totalMonthIndex / 12);
+  const targetMonth = (((totalMonthIndex % 12) + 12) % 12) + 1;
+  const naiveUtcMidnight = Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0, 0);
   const offsetMinutes = getTimezoneOffsetMinutes(timezone, new Date(naiveUtcMidnight));
   return new Date(naiveUtcMidnight - offsetMinutes * 60_000);
+}
+
+/**
+ * The `count` calendar months ending at (and including) the current month in `timezone`,
+ * oldest first, as `"YYYY-MM"` keys — the fixed set of buckets a rolling N-month chart
+ * always shows, independent of which months actually have data.
+ */
+export function monthKeysInTimezone(timezone: string, count: number, now: Date = new Date()): string[] {
+  const { year, month } = readYearMonth(timezone, now);
+  const currentIndex = year * 12 + (month - 1);
+  const keys: string[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const idx = currentIndex - i;
+    const y = Math.floor(idx / 12);
+    const m = (((idx % 12) + 12) % 12) + 1;
+    keys.push(`${y}-${String(m).padStart(2, '0')}`);
+  }
+  return keys;
 }
 
 function readYearMonth(timezone: string, date: Date): { year: number; month: number } {

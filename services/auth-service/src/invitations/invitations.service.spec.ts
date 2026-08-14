@@ -6,6 +6,7 @@ import { ROLES, RpcAuthContext } from '@app/shared';
 import { InvitationsService } from './invitations.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { hashToken } from '../auth/utils/token.util';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
@@ -29,7 +30,7 @@ describe('InvitationsService (integration — RBAC + tenant isolation)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-      providers: [InvitationsService, MailService, SubscriptionsService, PrismaService],
+      providers: [InvitationsService, MailService, SubscriptionsService, PrismaService, NotificationsService],
     }).compile();
 
     service = moduleRef.get(InvitationsService);
@@ -180,7 +181,13 @@ describe('InvitationsService (integration — RBAC + tenant isolation)', () => {
 
       const moduleRef = await Test.createTestingModule({
         imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-        providers: [InvitationsService, { provide: MailService, useValue: mailService }, SubscriptionsService, PrismaService],
+        providers: [
+          InvitationsService,
+          { provide: MailService, useValue: mailService },
+          SubscriptionsService,
+          PrismaService,
+          NotificationsService,
+        ],
       }).compile();
 
       const isolatedService = moduleRef.get(InvitationsService);

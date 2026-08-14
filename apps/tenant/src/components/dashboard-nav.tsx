@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { NotificationBell } from "@/components/notification-bell";
 
 const linkBase = "rounded-md px-3 py-1.5 text-sm font-medium transition-colors";
 const linkActive = "bg-gray-900 text-white";
@@ -19,6 +20,7 @@ export function DashboardNav() {
   if (user.role === "TENANT_OWNER") {
     links.push(
       { href: "/feedback", label: "Feedback" },
+      { href: "/analytics", label: "Analytics" },
       { href: "/settings/organization", label: "Organization" },
       { href: "/settings/team", label: "Team" },
       { href: "/settings/subscription", label: "Subscription" },
@@ -44,9 +46,12 @@ export function DashboardNav() {
             </Link>
           ))}
         </nav>
-        <button onClick={handleLogout} className="text-sm font-medium text-gray-500 hover:text-gray-900">
-          Sign out
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <button onClick={handleLogout} className="text-sm font-medium text-gray-500 hover:text-gray-900">
+            Sign out
+          </button>
+        </div>
       </div>
     </header>
   );

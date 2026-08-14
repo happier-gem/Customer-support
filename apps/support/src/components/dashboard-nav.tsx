@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { NotificationBell } from "@/components/notification-bell";
 
 const linkBase = "rounded-md px-3 py-1.5 text-sm font-medium transition-colors";
 const linkActive = "bg-gray-900 text-white";
@@ -35,6 +36,7 @@ export function DashboardNav() {
           <span className="text-sm text-gray-500">
             {user.name} <span className="text-gray-400">· {user.role.replace(/_/g, " ")}</span>
           </span>
+          <NotificationBell />
           <button onClick={handleLogout} className="text-sm font-medium text-gray-500 hover:text-gray-900">
             Sign out
           </button>

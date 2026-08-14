@@ -8,6 +8,8 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     TicketsModule,
     FeedbackModule,
     SubscriptionsModule,
+    AnalyticsModule,
+    NotificationsModule,
   ],
 })
 export class AuthServiceModule {}

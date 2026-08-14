@@ -11,6 +11,7 @@ import { FeedbackService } from '../feedback/feedback.service';
 import { InvitationsService } from '../invitations/invitations.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /**
  * Integration tests against a real Postgres database (see ../../.env.test),
@@ -36,7 +37,15 @@ describe('SubscriptionsService (integration — plan limits + tenant isolation)'
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-      providers: [SubscriptionsService, TicketsService, FeedbackService, InvitationsService, MailService, PrismaService],
+      providers: [
+        SubscriptionsService,
+        TicketsService,
+        FeedbackService,
+        InvitationsService,
+        MailService,
+        PrismaService,
+        NotificationsService,
+      ],
     }).compile();
 
     subscriptions = moduleRef.get(SubscriptionsService);

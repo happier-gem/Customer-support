@@ -12,6 +12,7 @@ import {
 import { FeedbackService } from './feedback.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /**
  * Integration tests against a real Postgres database (see ../../.env.test),
@@ -37,7 +38,7 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-      providers: [FeedbackService, SubscriptionsService, PrismaService],
+      providers: [FeedbackService, SubscriptionsService, PrismaService, NotificationsService],
     }).compile();
 
     service = moduleRef.get(FeedbackService);

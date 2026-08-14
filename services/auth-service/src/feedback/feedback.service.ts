@@ -17,12 +17,14 @@ import {
   FeedbackQuestionDto,
   FeedbackQuestionType,
   FeedbackResponseDto,
+  NOTIFICATION_TYPES,
   PaginatedResult,
   ROLES,
   RpcAuthContext,
 } from '@app/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const PARTY_SELECT = { id: true, name: true, email: true } as const;
 
@@ -153,6 +155,7 @@ export class FeedbackService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subscriptions: SubscriptionsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ---------------------------------------------------------------------
@@ -517,6 +520,25 @@ export class FeedbackService {
           },
         });
       }
+
+      // Step 12: notify the staff roles who are actually authorized to view responses
+      // (mirrors listResponses' own role check below) — never other customers.
+      const staff = await tx.user.findMany({
+        where: {
+          organizationId: form.organizationId,
+          role: { in: [ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT] },
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      await this.notifications.notify(tx, {
+        organizationId: form.organizationId,
+        recipientIds: staff.map((u) => u.id),
+        type: NOTIFICATION_TYPES.FEEDBACK_SUBMITTED,
+        title: 'New feedback submitted',
+        message: `New feedback was submitted for "${form.title}".`,
+        feedbackFormId: response.id,
+      });
 
       return tx.feedbackResponse.findUniqueOrThrow({ where: { id: response.id }, include: RESPONSE_INCLUDE });
     });

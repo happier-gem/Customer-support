@@ -13,6 +13,7 @@ import {
   SubscriptionUsageDto,
 } from '@app/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PlanLimitExceededException } from './plan-limit.exception';
 import { startOfCurrentMonthInTimezone } from './month-boundary.util';
 
@@ -33,7 +34,10 @@ type Db = Prisma.TransactionClient | PrismaService;
  */
 @Injectable()
 export class SubscriptionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /** The static, non-tenant-specific catalog of all three plans (Part 12: GET /subscription/plans). */
   listPlans(): SubscriptionPlanDto[] {
@@ -124,13 +128,12 @@ export class SubscriptionsService {
     const monthStart = startOfCurrentMonthInTimezone(org.timezone);
     const count = await tx.ticket.count({ where: { organizationId, createdAt: { gte: monthStart } } });
     if (count >= limit) {
-      throw new PlanLimitExceededException(
-        PLAN_FEATURES.MONTHLY_TICKETS,
-        plan,
-        limit,
-        count,
-        `Your ${plan} plan allows ${limit} tickets per month. Upgrade your plan to create more.`,
-      );
+      const message = `Your ${plan} plan allows ${limit} tickets per month. Upgrade your plan to create more.`;
+      // Independent write via `this.prisma` (never `tx`): the transaction this check runs
+      // inside is about to abort (the caller never gets to create the ticket), but "the
+      // limit was hit" is true regardless and must survive that rollback (Step 14).
+      await this.notifications.notifyPlanLimitReached(organizationId, 'Monthly ticket limit reached', message);
+      throw new PlanLimitExceededException(PLAN_FEATURES.MONTHLY_TICKETS, plan, limit, count, message);
     }
   }
 
@@ -153,13 +156,9 @@ export class SubscriptionsService {
       where: { organizationId, role: { in: [...ASSIGNABLE_TEAM_ROLES] }, isActive: true },
     });
     if (count >= limit) {
-      throw new PlanLimitExceededException(
-        PLAN_FEATURES.TEAM_MEMBERS,
-        plan,
-        limit,
-        count,
-        `Your ${plan} plan allows a maximum of ${limit} team members. Upgrade your plan to add more.`,
-      );
+      const message = `Your ${plan} plan allows a maximum of ${limit} team members. Upgrade your plan to add more.`;
+      await this.notifications.notifyPlanLimitReached(organizationId, 'Team member limit reached', message);
+      throw new PlanLimitExceededException(PLAN_FEATURES.TEAM_MEMBERS, plan, limit, count, message);
     }
   }
 
@@ -177,6 +176,7 @@ export class SubscriptionsService {
         limit === 0
           ? `Your ${plan} plan does not include custom feedback forms. Upgrade to Starter or Pro to create feedback forms.`
           : `Your ${plan} plan allows a maximum of ${limit} feedback forms. Upgrade your plan to create more.`;
+      await this.notifications.notifyPlanLimitReached(organizationId, 'Feedback form limit reached', message);
       throw new PlanLimitExceededException(PLAN_FEATURES.FEEDBACK_FORMS, plan, limit, count, message);
     }
   }

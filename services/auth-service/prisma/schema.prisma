@@ -25,10 +25,10 @@ enum PlanType {
 }
 
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  logoUrl   String?
-  timezone  String   @default("UTC")
+  id       String  @id @default(uuid())
+  name     String
+  logoUrl  String?
+  timezone String  @default("UTC")
 
   /// Every organization always has a plan — defaults to FREE at registration
   /// so no organization can ever bypass feature limits via a null plan.
@@ -41,6 +41,7 @@ model Organization {
   invitations   Invitation[]
   tickets       Ticket[]
   feedbackForms FeedbackForm[]
+  notifications Notification[]
 
   @@map("organizations")
 }
@@ -55,7 +56,7 @@ enum UserRole {
 }
 
 model User {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -91,6 +92,8 @@ model User {
   feedbackFormsCreated FeedbackForm[]     @relation("FeedbackFormCreator")
   feedbackResponses    FeedbackResponse[] @relation("FeedbackResponseCustomer")
 
+  notifications Notification[] @relation("NotificationRecipient")
+
   @@index([organizationId])
   @@index([emailVerificationTokenHash])
   @@index([passwordResetTokenHash])
@@ -116,7 +119,7 @@ model Invitation {
   email String
   role  UserRole
 
-  tokenHash String   @unique
+  tokenHash String           @unique
   expiresAt DateTime
   status    InvitationStatus @default(PENDING)
 
@@ -313,8 +316,8 @@ model FeedbackQuestion {
 
   type     FeedbackQuestionType
   label    String
-  required Boolean @default(true)
-  order    Int     @default(0)
+  required Boolean              @default(true)
+  order    Int                  @default(0)
 
   /// TEXT only; RATING is always validated as an integer 1-5 with no configuration needed.
   maxLength Int?
@@ -381,4 +384,67 @@ model FeedbackAnswer {
   @@index([questionId])
   @@index([organizationId])
   @@map("feedback_answers")
+}
+
+/// Phase 8: the notification event types the app actually generates — see
+/// NotificationsService and its callers (TicketsService, InvitationsService,
+/// MembersService, FeedbackService, SubscriptionsService) for exactly where each is
+/// created. No type here exists without a real triggering event.
+enum NotificationType {
+  TICKET_CREATED
+  TICKET_ASSIGNED
+  TICKET_STATUS_CHANGED
+  TICKET_RESOLVED
+  TICKET_CLOSED
+  TEAM_INVITATION_ACCEPTED
+  TEAM_MEMBER_ROLE_CHANGED
+  TEAM_MEMBER_REMOVED
+  FEEDBACK_SUBMITTED
+  PLAN_LIMIT_REACHED
+}
+
+/// Phase 8: a persistent, tenant- and recipient-scoped notification. `organizationId`
+/// and `recipientId` are always set server-side from the verified auth context of the
+/// action that triggered the notification (or, for PLAN_LIMIT_REACHED, from the
+/// resolved list of active tenant owners) — never from client input. NotificationsService
+/// re-enforces both on every read/write so a caller can never see or mutate another
+/// user's or another tenant's notifications.
+///
+/// The related-entity ids (`ticketId`, `invitationId`, `feedbackFormId`) are plain,
+/// unconstrained references rather than Prisma relations: a notification must remain
+/// readable even after its related resource is gone, so there is deliberately no FK to
+/// violate or cascade rule to maintain for them (the same free-form-reference reasoning
+/// as TicketHistory.metadata above). Exactly zero or one of them is ever set, depending
+/// on `type`. `feedbackFormId` (not a response id) because every feedback route in the
+/// frontend is keyed by form, not by individual response — that's what "go look at the
+/// responses this triggered" navigation actually needs.
+model Notification {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // A User is never actually hard-deleted (see the Ticket/TicketHistory comments
+  // above) — onDelete: Cascade here exists only for the same Organization-delete
+  // cascade-ordering reason, not because this fires in normal operation.
+  recipientId String
+  recipient   User   @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String
+
+  read   Boolean   @default(false)
+  readAt DateTime?
+
+  ticketId       String?
+  invitationId   String?
+  feedbackFormId String?
+
+  createdAt DateTime @default(now())
+
+  /// Default "list my notifications, newest first" query.
+  @@index([organizationId, recipientId, createdAt])
+  /// Unread-only listing and the unread-count query.
+  @@index([organizationId, recipientId, read, createdAt])
+  @@map("notifications")
 }

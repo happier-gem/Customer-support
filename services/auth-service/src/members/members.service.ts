@@ -1,7 +1,15 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { ASSIGNABLE_TEAM_ROLES, AssignableTeamRole, MemberDto, ROLES, RpcAuthContext } from '@app/shared';
+import {
+  ASSIGNABLE_TEAM_ROLES,
+  AssignableTeamRole,
+  MemberDto,
+  NOTIFICATION_TYPES,
+  ROLES,
+  RpcAuthContext,
+} from '@app/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 function toDto(user: User): MemberDto {
   return {
@@ -23,7 +31,10 @@ function toDto(user: User): MemberDto {
  */
 @Injectable()
 export class MembersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   private assertIsTenantOwner(authContext: RpcAuthContext): void {
     if (authContext.role !== ROLES.TENANT_OWNER) {
@@ -62,7 +73,24 @@ export class MembersService {
       await this.assertNotLastActiveOwner(authContext.organizationId, target.id);
     }
 
-    const updated = await this.prisma.user.update({ where: { id: target.id }, data: { role } });
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.user.update({ where: { id: target.id }, data: { role } });
+
+      // Never self-notify: a tenant owner changing their own role (if that's ever
+      // reachable) already knows.
+      if (target.id !== authContext.userId) {
+        await this.notifications.notify(tx, {
+          organizationId: authContext.organizationId,
+          recipientIds: [target.id],
+          type: NOTIFICATION_TYPES.TEAM_MEMBER_ROLE_CHANGED,
+          title: 'Your role has changed',
+          message: `Your role was changed to ${role.replace(/_/g, ' ')}.`,
+        });
+      }
+
+      return result;
+    });
+
     return toDto(updated);
   }
 
@@ -79,11 +107,23 @@ export class MembersService {
       await this.assertNotLastActiveOwner(authContext.organizationId, target.id);
     }
 
-    // Deactivate rather than delete, to preserve historical data, and
-    // revoke any active session immediately.
-    await this.prisma.user.update({
-      where: { id: target.id },
-      data: { isActive: false, refreshTokenHash: null },
+    await this.prisma.$transaction(async (tx) => {
+      // Deactivate rather than delete, to preserve historical data, and
+      // revoke any active session immediately.
+      await tx.user.update({
+        where: { id: target.id },
+        data: { isActive: false, refreshTokenHash: null },
+      });
+
+      if (target.id !== authContext.userId) {
+        await this.notifications.notify(tx, {
+          organizationId: authContext.organizationId,
+          recipientIds: [target.id],
+          type: NOTIFICATION_TYPES.TEAM_MEMBER_REMOVED,
+          title: 'Removed from organization',
+          message: 'You have been removed from the organization.',
+        });
+      }
     });
 
     return { message: 'Team member removed.' };

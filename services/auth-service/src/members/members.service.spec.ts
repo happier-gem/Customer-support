@@ -5,6 +5,7 @@ import * as argon2 from 'argon2';
 import { ROLES, RpcAuthContext } from '@app/shared';
 import { MembersService } from './members.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /**
  * Phase 3 team-member management: RBAC (only a Tenant Owner may manage
@@ -28,7 +29,7 @@ describe('MembersService (integration — RBAC + tenant isolation)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-      providers: [MembersService, PrismaService],
+      providers: [MembersService, PrismaService, NotificationsService],
     }).compile();
 
     service = moduleRef.get(MembersService);

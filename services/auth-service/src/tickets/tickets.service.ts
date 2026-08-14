@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Prisma, Ticket, TicketAttachment, TicketHistory, User } from '@prisma/client';
 import {
   DEFAULT_TICKET_PRIORITY,
+  NOTIFICATION_TYPES,
   PaginatedResult,
   ROLES,
   RpcAuthContext,
@@ -19,6 +20,7 @@ import {
 } from '@app/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type TicketWithParties = Ticket & {
   customer: Pick<User, 'id' | 'name' | 'email'>;
@@ -95,6 +97,7 @@ export class TicketsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subscriptions: SubscriptionsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private readonly includeParties = {
@@ -137,6 +140,26 @@ export class TicketsService {
           action: TICKET_HISTORY_ACTIONS.CREATED,
           newStatus: TICKET_STATUSES.OPEN,
         },
+      });
+
+      // Step 12: a brand-new, unassigned ticket needs attention from whoever can triage
+      // or pick it up — the tenant owner (who assigns) and every active support agent
+      // (who can self-assign). Least privilege: never the org's other customers.
+      const staff = await tx.user.findMany({
+        where: {
+          organizationId: created.organizationId,
+          role: { in: [ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT] },
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      await this.notifications.notify(tx, {
+        organizationId: created.organizationId,
+        recipientIds: staff.map((u) => u.id),
+        type: NOTIFICATION_TYPES.TICKET_CREATED,
+        title: 'New ticket created',
+        message: `A new ticket "${created.title}" was created.`,
+        ticketId: created.id,
       });
 
       return created;
@@ -335,6 +358,29 @@ export class TicketsService {
           newStatus: status,
         },
       });
+
+      // Step 12: the customer is who's "affected" by their own ticket's status moving —
+      // never the actor here (only a SUPPORT_AGENT/TENANT_OWNER can reach this method, so
+      // actorId !== ticket.customerId is guaranteed, but the check is kept for safety).
+      // A dedicated type for RESOLVED/CLOSED lets the frontend distinguish "it's done" from
+      // an ordinary in-progress transition without parsing metadata.
+      if (ticket.customerId !== authContext.userId) {
+        const type =
+          status === TICKET_STATUSES.RESOLVED
+            ? NOTIFICATION_TYPES.TICKET_RESOLVED
+            : status === TICKET_STATUSES.CLOSED
+              ? NOTIFICATION_TYPES.TICKET_CLOSED
+              : NOTIFICATION_TYPES.TICKET_STATUS_CHANGED;
+        await this.notifications.notify(tx, {
+          organizationId: ticket.organizationId,
+          recipientIds: [ticket.customerId],
+          type,
+          title: 'Ticket status updated',
+          message: `Your ticket "${ticket.title}" is now ${status.replace(/_/g, ' ').toLowerCase()}.`,
+          ticketId: ticket.id,
+        });
+      }
+
       return result;
     });
 
@@ -377,6 +423,20 @@ export class TicketsService {
           metadata: { agentId: agent.id, agentName: agent.name, ...metadata },
         },
       });
+
+      // Step 12/13: only notify the agent when someone *else* assigned them — an agent
+      // who just picked up a ticket themselves (assignSelf) already knows.
+      if (agent.id !== authContext.userId) {
+        await this.notifications.notify(tx, {
+          organizationId: ticket.organizationId,
+          recipientIds: [agent.id],
+          type: NOTIFICATION_TYPES.TICKET_ASSIGNED,
+          title: 'Ticket assigned to you',
+          message: `Ticket "${ticket.title}" was assigned to you.`,
+          ticketId: ticket.id,
+        });
+      }
+
       return result;
     });
 

@@ -72,3 +72,17 @@ export const SUBSCRIPTION_PATTERNS = {
   LIST_PLANS: 'subscription.plans.list',
   CHANGE_PLAN: 'subscription.change-plan',
 } as const;
+
+/** TCP message patterns for the Phase 7 analytics dashboard, served by the auth-service. */
+export const ANALYTICS_PATTERNS = {
+  OVERVIEW: 'analytics.overview',
+} as const;
+
+/** TCP message patterns for the Phase 8 notification system, served by the auth-service. */
+export const NOTIFICATION_PATTERNS = {
+  LIST: 'notifications.list',
+  UNREAD_COUNT: 'notifications.unread-count',
+  MARK_READ: 'notifications.mark-read',
+  MARK_ALL_READ: 'notifications.mark-all-read',
+  DELETE: 'notifications.delete',
+} as const;

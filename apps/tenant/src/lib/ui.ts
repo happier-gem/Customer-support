@@ -51,3 +51,14 @@ export function priorityBadgeClass(priority: string): string {
 export function formatStatusLabel(status: string): string {
   return status.replace(/_/g, " ");
 }
+
+/** e.g. 138 -> "2h 18m"; 45 -> "45m"; 0.4 -> "<1m". */
+export function formatDurationMinutes(totalMinutes: number): string {
+  if (totalMinutes < 1) return "<1m";
+  const minutes = Math.round(totalMinutes);
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0) return `${remainingMinutes}m`;
+  if (remainingMinutes === 0) return `${hours}h`;
+  return `${hours}h ${remainingMinutes}m`;
+}
