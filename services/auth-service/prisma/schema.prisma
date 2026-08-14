@@ -34,6 +34,14 @@ model Organization {
   /// so no organization can ever bypass feature limits via a null plan.
   plan PlanType @default(FREE)
 
+  /// Phase 9: a platform-level hold, set only by PLATFORM_ADMIN via the admin API
+  /// (AdminService.setSuspended) — distinct from User.isActive, which is a per-member
+  /// deactivation a Tenant Owner controls for their own team. A suspended organization's
+  /// users cannot log in or refresh their session (AuthService.login/refresh); a
+  /// PLATFORM_ADMIN caller is exempt from this check everywhere it's enforced, since
+  /// suspension is a tool platform admin applies *to* tenants, never to itself.
+  isSuspended Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

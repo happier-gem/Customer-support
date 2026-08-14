@@ -10,6 +10,7 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     SubscriptionsModule,
     AnalyticsModule,
     NotificationsModule,
+    AdminModule,
   ],
 })
 export class AuthServiceModule {}

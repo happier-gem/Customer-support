@@ -230,7 +230,7 @@ export class AuthService {
 
   async login(dto: LoginDto): Promise<{ tokens: TokenPair; user: PublicUser }> {
     const email = dto.email.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({ where: { email }, include: { organization: true } });
 
     if (!user) {
       throw new UnauthorizedException(GENERIC_AUTH_ERROR);
@@ -247,6 +247,14 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new ForbiddenException('This account has been deactivated.');
+    }
+
+    // Phase 9: a platform-level hold on the whole organization, distinct from this user's
+    // own isActive flag above. PLATFORM_ADMIN is exempt — suspension is a tool platform
+    // admin applies *to* tenants, and a platform admin's own placeholder organization row
+    // is never a real tenant to suspend.
+    if (user.role !== ROLES.PLATFORM_ADMIN && user.organization.isSuspended) {
+      throw new ForbiddenException('This organization has been suspended. Contact support for assistance.');
     }
 
     const tokens = await this.signTokenPair(user);
@@ -272,7 +280,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, include: { organization: true } });
     if (!user || !user.refreshTokenHash || !user.isActive) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
@@ -280,6 +288,14 @@ export class AuthService {
     const providedHash = hashToken(providedRefreshToken);
     if (!safeCompareHex(providedHash, user.refreshTokenHash)) {
       // Possible token theft/reuse of a rotated-out token: revoke the whole session.
+      await this.prisma.user.update({ where: { id: user.id }, data: { refreshTokenHash: null } });
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Same suspension rule as login() — an existing refresh token must not keep granting
+    // fresh access tokens once the organization is suspended (Step 10: a blocked login
+    // combined with a still-working refresh would defeat the point of suspending).
+    if (user.role !== ROLES.PLATFORM_ADMIN && user.organization.isSuspended) {
       await this.prisma.user.update({ where: { id: user.id }, data: { refreshTokenHash: null } });
       throw new UnauthorizedException('Invalid or expired refresh token');
     }

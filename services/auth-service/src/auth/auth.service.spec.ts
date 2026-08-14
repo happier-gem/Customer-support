@@ -232,6 +232,63 @@ describe('AuthService (integration)', () => {
     });
   });
 
+  describe('organization suspension (Phase 9)', () => {
+    it('rejects login for a user whose organization has been suspended', async () => {
+      const { user } = await registerVerifyAndLogin({ email: 'suspended@acme.test' });
+
+      await prisma.organization.update({ where: { id: user.organizationId }, data: { isSuspended: true } });
+
+      await expect(
+        authService.login({ email: 'suspended@acme.test', password: baseRegisterDto.password }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('allows login again once the organization is reactivated', async () => {
+      const { tokens, user } = await registerVerifyAndLogin({ email: 'reactivate@acme.test' });
+      void tokens;
+
+      await prisma.organization.update({ where: { id: user.organizationId }, data: { isSuspended: true } });
+      await expect(
+        authService.login({ email: 'reactivate@acme.test', password: baseRegisterDto.password }),
+      ).rejects.toThrow(ForbiddenException);
+
+      await prisma.organization.update({ where: { id: user.organizationId }, data: { isSuspended: false } });
+      await expect(
+        authService.login({ email: 'reactivate@acme.test', password: baseRegisterDto.password }),
+      ).resolves.toBeDefined();
+    });
+
+    it('rejects refresh once the organization is suspended, even with a still-valid refresh token, and revokes the session', async () => {
+      const { tokens, user } = await registerVerifyAndLogin({ email: 'refresh-suspend@acme.test' });
+
+      await prisma.organization.update({ where: { id: user.organizationId }, data: { isSuspended: true } });
+
+      await expect(authService.refresh(tokens.refreshToken)).rejects.toThrow(UnauthorizedException);
+
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(dbUser?.refreshTokenHash).toBeNull();
+    });
+
+    it('does not block a PLATFORM_ADMIN whose own placeholder organization is suspended', async () => {
+      const passwordHash = await argon2.hash('AdminPass123');
+      const platformOrg = await prisma.organization.create({ data: { name: 'Platform', isSuspended: true } });
+      await prisma.user.create({
+        data: {
+          organizationId: platformOrg.id,
+          name: 'Platform Admin',
+          email: 'admin@platform.test',
+          passwordHash,
+          role: 'PLATFORM_ADMIN',
+          emailVerified: true,
+        },
+      });
+
+      await expect(
+        authService.login({ email: 'admin@platform.test', password: 'AdminPass123' }),
+      ).resolves.toBeDefined();
+    });
+  });
+
   describe('logout', () => {
     it('invalidates the stored refresh token so it can no longer be used', async () => {
       const { tokens, user } = await registerVerifyAndLogin();

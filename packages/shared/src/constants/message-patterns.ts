@@ -86,3 +86,12 @@ export const NOTIFICATION_PATTERNS = {
   MARK_ALL_READ: 'notifications.mark-all-read',
   DELETE: 'notifications.delete',
 } as const;
+
+/** TCP message patterns for the Phase 9 Platform Admin area, served by the auth-service. */
+export const ADMIN_PATTERNS = {
+  LIST_ORGANIZATIONS: 'admin.organizations.list',
+  GET_ORGANIZATION: 'admin.organizations.get',
+  SET_ORGANIZATION_SUSPENDED: 'admin.organizations.set-suspended',
+  PLATFORM_STATS: 'admin.stats',
+  LIST_PLANS: 'admin.plans.list',
+} as const;
