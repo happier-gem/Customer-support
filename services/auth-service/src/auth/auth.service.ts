@@ -186,6 +186,10 @@ export class AuthService {
       throw new ForbiddenException('Please verify your email before logging in.');
     }
 
+    if (!user.isActive) {
+      throw new ForbiddenException('This account has been deactivated.');
+    }
+
     const tokens = await this.signTokenPair(user);
     await this.prisma.user.update({
       where: { id: user.id },
@@ -210,7 +214,7 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user || !user.refreshTokenHash) {
+    if (!user || !user.refreshTokenHash || !user.isActive) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 

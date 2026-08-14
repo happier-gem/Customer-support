@@ -71,4 +71,13 @@ export class MailService {
       html: `<p>We received a request to reset your password.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can ignore this email.</p>`,
     });
   }
+
+  async sendInvitationEmail(to: string, organizationName: string, role: string, inviteUrl: string): Promise<void> {
+    await this.sendMail({
+      to,
+      subject: `You've been invited to join ${organizationName}`,
+      text: `You've been invited to join ${organizationName} as ${role}. Accept your invitation: ${inviteUrl}\nThis link will expire, and can only be used once.`,
+      html: `<p>You've been invited to join <strong>${organizationName}</strong> as <strong>${role}</strong>.</p><p><a href="${inviteUrl}">${inviteUrl}</a></p><p>This link will expire, and can only be used once.</p>`,
+    });
+  }
 }

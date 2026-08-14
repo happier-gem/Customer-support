@@ -187,4 +187,50 @@ describe('OrganizationsService (integration — tenant isolation)', () => {
       expect(ids).toEqual(expect.arrayContaining([orgA.id, orgB.id]));
     });
   });
+
+  describe('updateProfile — Phase 3 company profile (name/logo/timezone)', () => {
+    it('lets a tenant owner update their own organization profile', async () => {
+      const updated = await service.updateProfile(ownerA, orgA.id, {
+        name: 'Company A Inc.',
+        timezone: 'America/New_York',
+        logoUrl: '/uploads/logos/abc.png',
+      });
+      expect(updated).toMatchObject({
+        name: 'Company A Inc.',
+        timezone: 'America/New_York',
+        logoUrl: '/uploads/logos/abc.png',
+      });
+    });
+
+    it('only updates the fields provided', async () => {
+      const updated = await service.updateProfile(ownerA, orgA.id, { timezone: 'Europe/Berlin' });
+      expect(updated).toMatchObject({ name: 'Company A', timezone: 'Europe/Berlin' });
+    });
+
+    it('rejects a support agent updating the organization profile', async () => {
+      await expect(service.updateProfile(supportAgentA, orgA.id, { timezone: 'UTC' })).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('rejects a customer updating the organization profile', async () => {
+      await expect(service.updateProfile(customerA, orgA.id, { timezone: 'UTC' })).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('a tenant owner cannot update another organization’s profile, even with a valid token', async () => {
+      await expect(service.updateProfile(ownerA, orgB.id, { name: 'Hijacked' })).rejects.toThrow(
+        ForbiddenException,
+      );
+      const org = await prisma.organization.findUnique({ where: { id: orgB.id } });
+      expect(org?.name).toBe('Company B');
+    });
+
+    it('a platform admin can update any organization profile', async () => {
+      await expect(service.updateProfile(platformAdmin, orgB.id, { timezone: 'Asia/Tokyo' })).resolves.toMatchObject(
+        { timezone: 'Asia/Tokyo' },
+      );
+    });
+  });
 });

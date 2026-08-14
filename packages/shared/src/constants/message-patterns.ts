@@ -17,4 +17,20 @@ export const ORG_PATTERNS = {
   GET_BY_ID: 'org.get-by-id',
   LIST: 'org.list',
   UPDATE: 'org.update',
+  UPDATE_PROFILE: 'org.update-profile',
+} as const;
+
+/** TCP message patterns for team-member management, served by the auth-service. */
+export const MEMBER_PATTERNS = {
+  LIST: 'members.list',
+  UPDATE_ROLE: 'members.update-role',
+  REMOVE: 'members.remove',
+} as const;
+
+/** TCP message patterns for the invitation lifecycle, served by the auth-service. */
+export const INVITATION_PATTERNS = {
+  CREATE: 'invitations.create',
+  LIST: 'invitations.list',
+  VALIDATE: 'invitations.validate',
+  ACCEPT: 'invitations.accept',
 } as const;

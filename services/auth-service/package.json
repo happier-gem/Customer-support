@@ -56,7 +56,8 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "maxWorkers": 1,
-    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+    "setupFiles": ["<rootDir>/../jest.setup-env.js"],
+    "transform": { "^.+\\.ts$": "ts-jest" },
     "moduleNameMapper": {
       "^@app/shared$": "<rootDir>/../../../packages/shared/src",
       "^@app/shared/(.*)$": "<rootDir>/../../../packages/shared/src/$1"

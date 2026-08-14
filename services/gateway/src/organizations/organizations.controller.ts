@@ -1,11 +1,24 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
-import { ORG_PATTERNS, OrganizationDto, ROLES, UpdateOrganizationDto } from '@app/shared';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ORG_PATTERNS, OrganizationDto, ROLES, UpdateOrganizationDto, UpdateOrganizationProfileDto } from '@app/shared';
 import { AuthGatewayService } from '../auth/auth-gateway.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
+import { logoPublicPath, logoUploadOptions } from './logo-upload.config';
 
 /**
  * Every route here is behind JwtAuthGuard, so `user` is always derived from a
@@ -24,6 +37,45 @@ export class OrganizationsController {
   @Roles(ROLES.PLATFORM_ADMIN)
   async list(@CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<OrganizationDto[]>(ORG_PATTERNS.LIST, { authContext: user });
+  }
+
+  /**
+   * The caller's own organization, derived entirely from their JWT
+   * (`user.organizationId`) — there is no way to pass a different
+   * organization id to this route.
+   */
+  @Get('me')
+  async getOwn(@CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<OrganizationDto>(ORG_PATTERNS.GET_BY_ID, {
+      authContext: user,
+      organizationId: user.organizationId,
+    });
+  }
+
+  @Patch('me')
+  @Roles(ROLES.TENANT_OWNER, ROLES.PLATFORM_ADMIN)
+  async updateOwn(@Body() dto: UpdateOrganizationProfileDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<OrganizationDto>(ORG_PATTERNS.UPDATE_PROFILE, {
+      authContext: user,
+      organizationId: user.organizationId,
+      name: dto.name,
+      timezone: dto.timezone,
+    });
+  }
+
+  @Post('me/logo')
+  @Roles(ROLES.TENANT_OWNER, ROLES.PLATFORM_ADMIN)
+  @UseInterceptors(FileInterceptor('logo', logoUploadOptions))
+  async uploadLogo(@UploadedFile() file: Express.Multer.File | undefined, @CurrentUser() user: AuthenticatedUser) {
+    if (!file) {
+      throw new BadRequestException('No logo file was provided.');
+    }
+
+    return this.authGateway.send<OrganizationDto>(ORG_PATTERNS.UPDATE_PROFILE, {
+      authContext: user,
+      organizationId: user.organizationId,
+      logoUrl: logoPublicPath(file.filename),
+    });
   }
 
   @Get(':id')

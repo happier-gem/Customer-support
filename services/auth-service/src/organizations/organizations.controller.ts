@@ -23,4 +23,22 @@ export class OrganizationsController {
   list(@Payload() data: { authContext: RpcAuthContext }) {
     return this.organizationsService.list(data.authContext);
   }
+
+  @MessagePattern(ORG_PATTERNS.UPDATE_PROFILE)
+  updateProfile(
+    @Payload()
+    data: {
+      authContext: RpcAuthContext;
+      organizationId: string;
+      name?: string;
+      timezone?: string;
+      logoUrl?: string;
+    },
+  ) {
+    return this.organizationsService.updateProfile(data.authContext, data.organizationId, {
+      name: data.name,
+      timezone: data.timezone,
+      logoUrl: data.logoUrl,
+    });
+  }
 }

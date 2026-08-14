@@ -9,13 +9,18 @@ datasource db {
 
 /// A tenant company. Phase 1 only establishes the shape of this entity;
 /// tenant-isolation enforcement (guards/middleware) is implemented in Phase 2.
+/// Phase 3 adds the company-profile fields (logo, timezone) managed from
+/// the org's own "/organizations/me" settings page.
 model Organization {
   id        String   @id @default(uuid())
   name      String
+  logoUrl   String?
+  timezone  String   @default("UTC")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users User[]
+  users       User[]
+  invitations Invitation[]
 
   @@map("organizations")
 }
@@ -39,6 +44,11 @@ model User {
   passwordHash String
   role         UserRole @default(TENANT_OWNER)
 
+  /// Phase 3 team-member removal deactivates rather than deletes, to
+  /// preserve historical data (e.g. anything the user authored later).
+  /// A deactivated user can no longer log in.
+  isActive Boolean @default(true)
+
   emailVerified              Boolean   @default(false)
   emailVerificationTokenHash String?
   emailVerificationExpiresAt DateTime?
@@ -51,8 +61,44 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  sentInvitations Invitation[] @relation("InvitationInviter")
+
   @@index([organizationId])
   @@index([emailVerificationTokenHash])
   @@index([passwordResetTokenHash])
   @@map("users")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+/// A pending (or resolved) invite for a teammate to join an organization
+/// with a specific role. The raw token is emailed to the invitee and never
+/// persisted — only its hash is stored, and it is looked up/compared the
+/// same way password-reset/email-verification tokens are (see auth/utils/token.util.ts).
+model Invitation {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  email String
+  role  UserRole
+
+  tokenHash String   @unique
+  expiresAt DateTime
+  status    InvitationStatus @default(PENDING)
+
+  invitedBy String
+  inviter   User   @relation("InvitationInviter", fields: [invitedBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitations")
 }

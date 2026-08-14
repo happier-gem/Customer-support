@@ -7,6 +7,8 @@ function toDto(org: Organization): OrganizationDto {
   return {
     id: org.id,
     name: org.name,
+    logoUrl: org.logoUrl,
+    timezone: org.timezone,
     createdAt: org.createdAt.toISOString(),
     updatedAt: org.updatedAt.toISOString(),
   };
@@ -55,6 +57,39 @@ export class OrganizationsService {
       where: { id: requestedOrganizationId },
       data: { name: name.trim() },
     });
+    return toDto(updated);
+  }
+
+  /**
+   * Phase 3 company-profile update (name/logo/timezone), used by the
+   * `/organizations/me` routes. `requestedOrganizationId` is always
+   * `authContext.organizationId` — the gateway never forwards a
+   * client-supplied organization id here. Kept separate from `update()`
+   * (Phase 2's rename-only endpoint) so that endpoint's contract, and the
+   * tests pinned to it, are untouched.
+   */
+  async updateProfile(
+    authContext: RpcAuthContext,
+    requestedOrganizationId: string,
+    dto: { name?: string; timezone?: string; logoUrl?: string },
+  ): Promise<OrganizationDto> {
+    this.assertCanAccess(authContext, requestedOrganizationId);
+
+    if (authContext.role !== ROLES.PLATFORM_ADMIN && authContext.role !== ROLES.TENANT_OWNER) {
+      throw new ForbiddenException('Only a tenant owner can update the organization.');
+    }
+
+    const existing = await this.prisma.organization.findUnique({ where: { id: requestedOrganizationId } });
+    if (!existing) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    const data: { name?: string; timezone?: string; logoUrl?: string } = {};
+    if (dto.name !== undefined) data.name = dto.name.trim();
+    if (dto.timezone !== undefined) data.timezone = dto.timezone;
+    if (dto.logoUrl !== undefined) data.logoUrl = dto.logoUrl;
+
+    const updated = await this.prisma.organization.update({ where: { id: requestedOrganizationId }, data });
     return toDto(updated);
   }
 
