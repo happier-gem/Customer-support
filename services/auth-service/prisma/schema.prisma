@@ -19,9 +19,10 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users       User[]
-  invitations Invitation[]
-  tickets     Ticket[]
+  users         User[]
+  invitations   Invitation[]
+  tickets       Ticket[]
+  feedbackForms FeedbackForm[]
 
   @@map("organizations")
 }
@@ -68,6 +69,9 @@ model User {
   ticketsAsAgent      Ticket[]           @relation("TicketAssignedAgent")
   ticketAttachments   TicketAttachment[]
   ticketHistoryEvents TicketHistory[]
+
+  feedbackFormsCreated FeedbackForm[]     @relation("FeedbackFormCreator")
+  feedbackResponses    FeedbackResponse[] @relation("FeedbackResponseCustomer")
 
   @@index([organizationId])
   @@index([emailVerificationTokenHash])
@@ -228,4 +232,135 @@ model TicketHistory {
   @@index([ticketId, createdAt])
   @@index([organizationId])
   @@map("ticket_history")
+}
+
+enum FeedbackCategory {
+  SUPPORT
+  PRODUCT
+  SERVICE
+  GENERAL
+  OTHER
+}
+
+/// A form starts INACTIVE so a Tenant Owner can build out its questions
+/// before customers can see or submit to it, then explicitly activates it.
+enum FeedbackFormStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum FeedbackQuestionType {
+  RATING
+  TEXT
+}
+
+/// Phase 5: a tenant-owned survey. Always associated with exactly one
+/// organization, set once at creation from the caller's verified auth
+/// context — never re-derived from client input (mirrors Ticket above).
+model FeedbackForm {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("FeedbackFormCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  category    FeedbackCategory   @default(GENERAL)
+  status      FeedbackFormStatus @default(INACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions FeedbackQuestion[]
+  responses FeedbackResponse[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+  @@map("feedback_forms")
+}
+
+/// A single custom question on a form. `organizationId` is denormalized from
+/// the parent form for tenant-scoped lookups without a join, the same
+/// rationale as TicketAttachment.organizationId above. `type` is immutable
+/// after creation (see UpdateFeedbackQuestionDto) so it can never drift out
+/// of sync with answers already stored against it.
+model FeedbackQuestion {
+  id     String       @id @default(uuid())
+  formId String
+  form   FeedbackForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  organizationId String
+
+  type     FeedbackQuestionType
+  label    String
+  required Boolean @default(true)
+  order    Int     @default(0)
+
+  /// TEXT only; RATING is always validated as an integer 1-5 with no configuration needed.
+  maxLength Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  answers FeedbackAnswer[]
+
+  @@index([formId, order])
+  @@index([organizationId])
+  @@map("feedback_questions")
+}
+
+/// One customer's submission to a form. `customerId` is always populated —
+/// for tenant isolation, abuse/duplicate prevention, and so a customer can
+/// look up their own submission history — even when `anonymous` is true.
+/// Anonymity is a *display* concern enforced centrally in
+/// FeedbackService's response-to-DTO mapping (see toResponseDto), never by
+/// omitting ownership data at the database layer.
+model FeedbackResponse {
+  id     String       @id @default(uuid())
+  formId String
+  form   FeedbackForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  organizationId String
+
+  customerId String
+  customer   User   @relation("FeedbackResponseCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+
+  anonymous Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  answers FeedbackAnswer[]
+
+  @@index([formId, createdAt])
+  @@index([organizationId])
+  @@index([organizationId, customerId])
+  @@map("feedback_responses")
+}
+
+/// A single answer within a response, to a single question. Exactly one of
+/// `ratingValue` / `textValue` is populated, matching the answered
+/// question's `type` (validated in FeedbackService before the transaction
+/// that creates these rows).
+model FeedbackAnswer {
+  id String @id @default(uuid())
+
+  responseId String
+  response   FeedbackResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   FeedbackQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  organizationId String
+
+  ratingValue Int?
+  textValue   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([responseId])
+  @@index([questionId])
+  @@index([organizationId])
+  @@map("feedback_answers")
 }

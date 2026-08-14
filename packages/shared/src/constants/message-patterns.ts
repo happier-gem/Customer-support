@@ -49,3 +49,19 @@ export const TICKET_PATTERNS = {
   CREATE_ATTACHMENT: 'tickets.attachments.create',
   GET_ATTACHMENT: 'tickets.attachments.get',
 } as const;
+
+/** TCP message patterns for the Phase 5 feedback system, served by the auth-service. */
+export const FEEDBACK_PATTERNS = {
+  CREATE_FORM: 'feedback.forms.create',
+  LIST_FORMS: 'feedback.forms.list',
+  GET_FORM: 'feedback.forms.get',
+  UPDATE_FORM: 'feedback.forms.update',
+  UPDATE_FORM_STATUS: 'feedback.forms.update-status',
+  DELETE_FORM: 'feedback.forms.delete',
+  CREATE_QUESTION: 'feedback.forms.questions.create',
+  UPDATE_QUESTION: 'feedback.forms.questions.update',
+  DELETE_QUESTION: 'feedback.forms.questions.delete',
+  CREATE_RESPONSE: 'feedback.forms.responses.create',
+  LIST_RESPONSES: 'feedback.forms.responses.list',
+  GET_RESPONSE: 'feedback.responses.get',
+} as const;

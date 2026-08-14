@@ -18,6 +18,7 @@ export function DashboardNav() {
   const links = [
     { href: "/tickets", label: "My Tickets" },
     { href: "/tickets/new", label: "New Ticket" },
+    { href: "/feedback", label: "Feedback" },
   ];
 
   async function handleLogout() {

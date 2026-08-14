@@ -26,6 +26,8 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
   WAITING_FOR_CUSTOMER: "bg-purple-50 text-purple-700",
   RESOLVED: "bg-green-50 text-green-700",
   CLOSED: "bg-gray-100 text-gray-600",
+  ACTIVE: "bg-green-50 text-green-700",
+  INACTIVE: "bg-gray-100 text-gray-600",
 };
 
 const PRIORITY_BADGE_CLASSES: Record<string, string> = {

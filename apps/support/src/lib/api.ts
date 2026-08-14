@@ -135,6 +135,43 @@ export interface Member {
   createdAt: string;
 }
 
+export type FeedbackCategory = "SUPPORT" | "PRODUCT" | "SERVICE" | "GENERAL" | "OTHER";
+export type FeedbackFormStatus = "ACTIVE" | "INACTIVE";
+export type FeedbackQuestionType = "RATING" | "TEXT";
+
+export interface FeedbackFormSummary {
+  id: string;
+  organizationId: string;
+  title: string;
+  description: string | null;
+  category: FeedbackCategory;
+  status: FeedbackFormStatus;
+  questionCount: number;
+  responseCount: number;
+  createdBy: TicketPerson;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackAnswer {
+  id: string;
+  questionId: string;
+  questionLabel: string;
+  questionType: FeedbackQuestionType;
+  ratingValue: number | null;
+  textValue: string | null;
+}
+
+export interface FeedbackResponse {
+  id: string;
+  formId: string;
+  organizationId: string;
+  anonymous: boolean;
+  customer: TicketPerson | null;
+  answers: FeedbackAnswer[];
+  createdAt: string;
+}
+
 function authHeader(accessToken: string): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
@@ -211,4 +248,12 @@ export const api = {
 
   listMembers: (accessToken: string) =>
     request<Member[]>("/organizations/me/members", { headers: authHeader(accessToken) }),
+
+  listFeedbackForms: (accessToken: string, params: { page?: number; limit?: number } = {}) =>
+    request<Paginated<FeedbackFormSummary>>(`/feedback/forms${buildQuery(params)}`, { headers: authHeader(accessToken) }),
+
+  listFeedbackResponses: (accessToken: string, formId: string, params: { page?: number; limit?: number } = {}) =>
+    request<Paginated<FeedbackResponse>>(`/feedback/forms/${encodeURIComponent(formId)}/responses${buildQuery(params)}`, {
+      headers: authHeader(accessToken),
+    }),
 };

@@ -17,7 +17,11 @@ export function DashboardNav() {
 
   const links = [{ href: "/dashboard", label: "Dashboard" }, { href: "/tickets", label: "Tickets" }];
   if (user.role === "TENANT_OWNER") {
-    links.push({ href: "/settings/organization", label: "Organization" }, { href: "/settings/team", label: "Team" });
+    links.push(
+      { href: "/feedback", label: "Feedback" },
+      { href: "/settings/organization", label: "Organization" },
+      { href: "/settings/team", label: "Team" },
+    );
   }
 
   async function handleLogout() {

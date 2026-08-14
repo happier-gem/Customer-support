@@ -27,6 +27,9 @@ export function DashboardNav() {
           <Link href="/tickets" className={`${linkBase} ${pathname.startsWith("/tickets") ? linkActive : linkInactive}`}>
             Tickets
           </Link>
+          <Link href="/feedback" className={`${linkBase} ${pathname.startsWith("/feedback") ? linkActive : linkInactive}`}>
+            Feedback
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">

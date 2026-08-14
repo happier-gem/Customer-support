@@ -6,6 +6,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { MembersModule } from './members/members.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { TicketsModule } from './tickets/tickets.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { TicketsModule } from './tickets/tickets.module';
     MembersModule,
     InvitationsModule,
     TicketsModule,
+    FeedbackModule,
   ],
 })
 export class AuthServiceModule {}

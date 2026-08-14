@@ -117,6 +117,65 @@ export interface TicketListParams {
   assigneeId?: string;
 }
 
+export type FeedbackCategory = "SUPPORT" | "PRODUCT" | "SERVICE" | "GENERAL" | "OTHER";
+export type FeedbackFormStatus = "ACTIVE" | "INACTIVE";
+export type FeedbackQuestionType = "RATING" | "TEXT";
+
+export interface FeedbackQuestion {
+  id: string;
+  formId: string;
+  type: FeedbackQuestionType;
+  label: string;
+  required: boolean;
+  order: number;
+  maxLength: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackFormSummary {
+  id: string;
+  organizationId: string;
+  title: string;
+  description: string | null;
+  category: FeedbackCategory;
+  status: FeedbackFormStatus;
+  questionCount: number;
+  responseCount: number;
+  createdBy: TicketPerson;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackFormDetail extends FeedbackFormSummary {
+  questions: FeedbackQuestion[];
+}
+
+export interface FeedbackAnswerInput {
+  questionId: string;
+  ratingValue?: number;
+  textValue?: string;
+}
+
+export interface FeedbackAnswer {
+  id: string;
+  questionId: string;
+  questionLabel: string;
+  questionType: FeedbackQuestionType;
+  ratingValue: number | null;
+  textValue: string | null;
+}
+
+export interface FeedbackResponse {
+  id: string;
+  formId: string;
+  organizationId: string;
+  anonymous: boolean;
+  customer: TicketPerson | null;
+  answers: FeedbackAnswer[];
+  createdAt: string;
+}
+
 function authHeader(accessToken: string): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
@@ -202,4 +261,17 @@ export const api = {
 
   attachmentDownloadUrl: (ticketId: string, attachmentId: string) =>
     `${API_BASE}/tickets/${encodeURIComponent(ticketId)}/attachments/${encodeURIComponent(attachmentId)}/download`,
+
+  listFeedbackForms: (accessToken: string, params: { page?: number; limit?: number } = {}) =>
+    request<Paginated<FeedbackFormSummary>>(`/feedback/forms${buildQuery(params)}`, { headers: authHeader(accessToken) }),
+
+  getFeedbackForm: (accessToken: string, id: string) =>
+    request<FeedbackFormDetail>(`/feedback/forms/${encodeURIComponent(id)}`, { headers: authHeader(accessToken) }),
+
+  submitFeedbackResponse: (accessToken: string, formId: string, body: { anonymous?: boolean; answers: FeedbackAnswerInput[] }) =>
+    request<FeedbackResponse>(`/feedback/forms/${encodeURIComponent(formId)}/responses`, {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
 };
