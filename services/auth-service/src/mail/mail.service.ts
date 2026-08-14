@@ -45,13 +45,22 @@ export class MailService {
       return;
     }
 
-    await this.transporter.sendMail({
-      from: this.from,
-      to: options.to,
-      subject: options.subject,
-      text: options.text,
-      html: options.html,
-    });
+    try {
+      await this.transporter.sendMail({
+        from: this.from,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      });
+    } catch (err) {
+      // Email is a best-effort side channel: the account/token/etc. that
+      // triggered this send has already been committed to the database by
+      // the caller, so a transient SMTP failure must not fail the request
+      // and strand the record with no way to retry (e.g. a repeat
+      // registration attempt would just hit "email already exists").
+      this.logger.error(`Failed to send email to ${options.to}: ${(err as Error).message}`, (err as Error).stack);
+    }
   }
 
   async sendVerificationEmail(to: string, verificationUrl: string): Promise<void> {

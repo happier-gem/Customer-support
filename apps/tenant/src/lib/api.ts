@@ -49,13 +49,11 @@ export interface PublicUser {
 
 export interface LoginResponse {
   accessToken: string;
-  refreshToken: string;
   user: PublicUser;
 }
 
 export interface RefreshResponse {
   accessToken?: string;
-  refreshToken?: string;
   message?: string;
 }
 

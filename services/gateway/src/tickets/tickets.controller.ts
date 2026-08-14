@@ -54,12 +54,12 @@ export class TicketsController {
   @Post()
   @Roles(ROLES.CUSTOMER)
   async create(@Body() dto: CreateTicketDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.authGateway.send<TicketDto>(TICKET_PATTERNS.CREATE, { authContext: user, ...dto });
+    return this.authGateway.send<TicketDto>(TICKET_PATTERNS.CREATE, { ...dto, authContext: user });
   }
 
   @Get()
   async list(@Query() query: TicketQueryDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.authGateway.send<PaginatedResult<TicketDto>>(TICKET_PATTERNS.LIST, { authContext: user, ...query });
+    return this.authGateway.send<PaginatedResult<TicketDto>>(TICKET_PATTERNS.LIST, { ...query, authContext: user });
   }
 
   @Get(':id')

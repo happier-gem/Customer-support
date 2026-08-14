@@ -48,7 +48,7 @@ export class FeedbackController {
   @Post('forms')
   @Roles(ROLES.TENANT_OWNER)
   async createForm(@Body() dto: CreateFeedbackFormDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.authGateway.send<FeedbackFormDetailDto>(FEEDBACK_PATTERNS.CREATE_FORM, { authContext: user, ...dto });
+    return this.authGateway.send<FeedbackFormDetailDto>(FEEDBACK_PATTERNS.CREATE_FORM, { ...dto, authContext: user });
   }
 
   @Get('forms/:id')

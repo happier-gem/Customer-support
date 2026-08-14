@@ -78,7 +78,7 @@ export class AuthController {
       dto,
     );
     this.setRefreshCookie(res, result.tokens.refreshToken);
-    return { accessToken: result.tokens.accessToken, refreshToken: result.tokens.refreshToken, user: result.user };
+    return { accessToken: result.tokens.accessToken, user: result.user };
   }
 
   @Post('refresh')
@@ -96,7 +96,7 @@ export class AuthController {
 
     const tokens = await this.authGateway.send<TokenPair>(AUTH_PATTERNS.REFRESH, { refreshToken: provided });
     this.setRefreshCookie(res, tokens.refreshToken);
-    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+    return { accessToken: tokens.accessToken };
   }
 
   @Post('logout')
