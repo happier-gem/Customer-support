@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/auth-card";
+import { PasswordInput } from "@/components/password-input";
 import { api, ApiError, type InvitationPreview } from "@/lib/api";
 import { buttonClass, errorTextClass, inputClass, labelClass, linkClass, successTextClass } from "@/lib/ui";
 
@@ -130,15 +131,13 @@ function AcceptInvitationContent() {
           <label htmlFor="password" className={labelClass}>
             Password
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             minLength={8}
             maxLength={128}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
             placeholder="At least 8 characters, with a letter and a number"
           />
         </div>
@@ -146,15 +145,13 @@ function AcceptInvitationContent() {
           <label htmlFor="confirmPassword" className={labelClass}>
             Confirm password
           </label>
-          <input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             required
             minLength={8}
             maxLength={128}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className={inputClass}
             placeholder="Re-enter your password"
           />
         </div>

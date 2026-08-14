@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { AuthCard } from "@/components/auth-card";
+import { PasswordInput } from "@/components/password-input";
 import { api, ApiError } from "@/lib/api";
 import { buttonClass, errorTextClass, inputClass, labelClass, linkClass, successTextClass } from "@/lib/ui";
 
@@ -95,15 +96,13 @@ export default function RegisterPage() {
           <label htmlFor="password" className={labelClass}>
             Password
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             minLength={8}
             maxLength={128}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
             placeholder="At least 8 characters, with a letter and a number"
           />
         </div>

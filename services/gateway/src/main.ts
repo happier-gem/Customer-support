@@ -22,8 +22,18 @@ async function bootstrap() {
   app.use(cookieParser());
   app.useStaticAssets(UPLOADS_DIR, { prefix: '/uploads/' });
 
+  const defaultFrontendOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://localhost:3003',
+  ];
+  const allowedOrigins = process.env.FRONTEND_URLS
+    ? process.env.FRONTEND_URLS.split(',').map((origin) => origin.trim())
+    : (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : defaultFrontendOrigins);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
   });
 

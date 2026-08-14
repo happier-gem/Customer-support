@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Support Portal",
+  title: "Tenant Portal",
   description: "Multi-Tenant Client Feedback & Support Portal",
 };
 
