@@ -65,3 +65,10 @@ export const FEEDBACK_PATTERNS = {
   LIST_RESPONSES: 'feedback.forms.responses.list',
   GET_RESPONSE: 'feedback.responses.get',
 } as const;
+
+/** TCP message patterns for the Phase 6 subscription system, served by the auth-service. */
+export const SUBSCRIPTION_PATTERNS = {
+  GET: 'subscription.get',
+  LIST_PLANS: 'subscription.plans.list',
+  CHANGE_PLAN: 'subscription.change-plan',
+} as const;

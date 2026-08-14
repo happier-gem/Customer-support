@@ -7,6 +7,7 @@ import { MembersModule } from './members/members.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 @Module({
@@ -18,6 +19,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     InvitationsModule,
     TicketsModule,
     FeedbackModule,
+    SubscriptionsModule,
   ],
   providers: [
     {

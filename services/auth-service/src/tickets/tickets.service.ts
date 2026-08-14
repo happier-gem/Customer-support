@@ -18,6 +18,7 @@ import {
   isValidTicketStatusTransition,
 } from '@app/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 type TicketWithParties = Ticket & {
   customer: Pick<User, 'id' | 'name' | 'email'>;
@@ -91,7 +92,10 @@ export interface TicketListQuery {
  */
 @Injectable()
 export class TicketsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly subscriptions: SubscriptionsService,
+  ) {}
 
   private readonly includeParties = {
     customer: { select: PARTY_SELECT },
@@ -107,6 +111,12 @@ export class TicketsService {
     }
 
     const ticket = await this.prisma.$transaction(async (tx) => {
+      // Must run first, inside this same transaction: the advisory lock it
+      // takes on (org, MONTHLY_TICKETS) is held until commit, so a
+      // concurrent create for the same org serializes behind it instead of
+      // racing past a stale count (Part 29).
+      await this.subscriptions.assertCanCreateTicket(tx, authContext.organizationId);
+
       const created = await tx.ticket.create({
         data: {
           organizationId: authContext.organizationId,

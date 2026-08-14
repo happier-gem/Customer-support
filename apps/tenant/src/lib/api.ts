@@ -4,6 +4,10 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
+    /** Machine-readable error code, e.g. "PLAN_LIMIT_REACHED" (Phase 6). */
+    public code?: string,
+    /** Structured detail accompanying `code`, e.g. PlanLimitErrorPayload fields. */
+    public data?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -28,7 +32,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const message = Array.isArray(data?.message) ? data.message.join(", ") : (data?.message ?? "Something went wrong. Please try again.");
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, data?.code, data?.data);
   }
 
   return data as T;
@@ -220,6 +224,32 @@ export interface FeedbackFormListParams {
   limit?: number;
   category?: FeedbackCategory;
   status?: FeedbackFormStatus;
+}
+
+export type PlanType = "FREE" | "STARTER" | "PRO";
+
+export interface PlanLimits {
+  teamMembers: number | null;
+  monthlyTickets: number | null;
+  feedbackForms: number | null;
+}
+
+export interface SubscriptionPlan {
+  plan: PlanType;
+  limits: PlanLimits;
+}
+
+export interface SubscriptionUsage {
+  teamMembers: number;
+  monthlyTickets: number;
+  feedbackForms: number;
+}
+
+export interface Subscription {
+  organizationId: string;
+  plan: PlanType;
+  limits: PlanLimits;
+  usage: SubscriptionUsage;
 }
 
 function buildQuery(params: object): string {
@@ -423,5 +453,18 @@ export const api = {
   listFeedbackResponses: (accessToken: string, formId: string, params: { page?: number; limit?: number } = {}) =>
     request<Paginated<FeedbackResponse>>(`/feedback/forms/${encodeURIComponent(formId)}/responses${buildQuery(params)}`, {
       headers: authHeader(accessToken),
+    }),
+
+  getSubscription: (accessToken: string) =>
+    request<Subscription>("/subscription", { headers: authHeader(accessToken) }),
+
+  listPlans: (accessToken: string) =>
+    request<SubscriptionPlan[]>("/subscription/plans", { headers: authHeader(accessToken) }),
+
+  changePlan: (accessToken: string, plan: PlanType) =>
+    request<Subscription>("/subscription/change-plan", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ plan }),
     }),
 };

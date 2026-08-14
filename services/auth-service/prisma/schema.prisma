@@ -11,11 +11,29 @@ datasource db {
 /// tenant-isolation enforcement (guards/middleware) is implemented in Phase 2.
 /// Phase 3 adds the company-profile fields (logo, timezone) managed from
 /// the org's own "/organizations/me" settings page.
+/// Phase 6: the three fixed subscription tiers. Limits for each are business
+/// constants (see packages/shared/src/constants/subscription.ts), not stored
+/// per-row here — with only 3 non-tenant-editable plans and no Platform Admin
+/// plan-management yet (that's Phase 9), a `plan` enum on Organization is the
+/// smallest correct design. A future Phase 9 that lets Platform Admin edit
+/// limits would migrate PLAN_LIMITS into a real table at that point; nothing
+/// about this shape blocks that later change.
+enum PlanType {
+  FREE
+  STARTER
+  PRO
+}
+
 model Organization {
   id        String   @id @default(uuid())
   name      String
   logoUrl   String?
   timezone  String   @default("UTC")
+
+  /// Every organization always has a plan — defaults to FREE at registration
+  /// so no organization can ever bypass feature limits via a null plan.
+  plan PlanType @default(FREE)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

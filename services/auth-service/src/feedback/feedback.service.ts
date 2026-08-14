@@ -22,6 +22,7 @@ import {
   RpcAuthContext,
 } from '@app/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 const PARTY_SELECT = { id: true, name: true, email: true } as const;
 
@@ -149,7 +150,10 @@ export interface FeedbackAnswerInput {
  */
 @Injectable()
 export class FeedbackService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly subscriptions: SubscriptionsService,
+  ) {}
 
   // ---------------------------------------------------------------------
   // Forms
@@ -163,16 +167,23 @@ export class FeedbackService {
       throw new ForbiddenException('Only a tenant owner can create a feedback form.');
     }
 
-    const form = await this.prisma.feedbackForm.create({
-      data: {
-        organizationId: authContext.organizationId,
-        createdById: authContext.userId,
-        title: dto.title.trim(),
-        description: dto.description?.trim() || null,
-        category: dto.category ?? DEFAULT_FEEDBACK_CATEGORY,
-        status: FEEDBACK_FORM_STATUSES.INACTIVE,
-      },
-      include: FORM_DETAIL_INCLUDE,
+    const form = await this.prisma.$transaction(async (tx) => {
+      // See TicketsService.create: must run first, inside this transaction,
+      // so the lock it holds serializes concurrent form creation for the
+      // same org until commit.
+      await this.subscriptions.assertCanCreateFeedbackForm(tx, authContext.organizationId);
+
+      return tx.feedbackForm.create({
+        data: {
+          organizationId: authContext.organizationId,
+          createdById: authContext.userId,
+          title: dto.title.trim(),
+          description: dto.description?.trim() || null,
+          category: dto.category ?? DEFAULT_FEEDBACK_CATEGORY,
+          status: FEEDBACK_FORM_STATUSES.INACTIVE,
+        },
+        include: FORM_DETAIL_INCLUDE,
+      });
     });
 
     return toFormDetailDto(form);

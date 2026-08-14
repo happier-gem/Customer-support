@@ -11,6 +11,7 @@ import {
 } from '@app/shared';
 import { FeedbackService } from './feedback.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 /**
  * Integration tests against a real Postgres database (see ../../.env.test),
@@ -36,7 +37,7 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-      providers: [FeedbackService, PrismaService],
+      providers: [FeedbackService, SubscriptionsService, PrismaService],
     }).compile();
 
     service = moduleRef.get(FeedbackService);
@@ -66,8 +67,11 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
         },
       });
 
-    orgA = await prisma.organization.create({ data: { name: 'Company A' } });
-    orgB = await prisma.organization.create({ data: { name: 'Company B' } });
+    // PRO here (not the FREE default) so this suite's pre-Phase-6 assumption
+    // of unlimited form creation still holds; Phase 6's own feedback-form
+    // limit behavior is covered in subscriptions/subscriptions.service.spec.ts.
+    orgA = await prisma.organization.create({ data: { name: 'Company A', plan: 'PRO' } });
+    orgB = await prisma.organization.create({ data: { name: 'Company B', plan: 'PRO' } });
 
     const [userOwnerA, userAgentA, userCustomerA, userCustomerA2] = await Promise.all([
       mkUser(orgA.id, 'Owner A', ROLES.TENANT_OWNER),

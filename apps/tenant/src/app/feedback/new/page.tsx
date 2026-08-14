@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type FeedbackCategory } from "@/lib/api";
-import { buttonClass, cardClass, errorTextClass, inputClass, labelClass, selectClass } from "@/lib/ui";
+import { buttonClass, cardClass, errorTextClass, inputClass, labelClass, linkClass, selectClass } from "@/lib/ui";
 
 const CATEGORIES: FeedbackCategory[] = ["SUPPORT", "PRODUCT", "SERVICE", "GENERAL", "OTHER"];
 
@@ -17,6 +18,7 @@ export default function NewFeedbackFormPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<FeedbackCategory>("GENERAL");
   const [error, setError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -31,12 +33,14 @@ export default function NewFeedbackFormPage() {
     e.preventDefault();
     if (!accessToken) return;
     setError(null);
+    setLimitReached(false);
     setLoading(true);
     try {
       const form = await api.createFeedbackForm(accessToken, { title, description: description || undefined, category });
       router.push(`/feedback/${form.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+      setLimitReached(err instanceof ApiError && err.code === "PLAN_LIMIT_REACHED");
     } finally {
       setLoading(false);
     }
@@ -98,7 +102,19 @@ export default function NewFeedbackFormPage() {
               ))}
             </select>
           </div>
-          {error && <p className={errorTextClass}>{error}</p>}
+          {error && (
+            <p className={errorTextClass}>
+              {error}
+              {limitReached && (
+                <>
+                  {" "}
+                  <Link href="/settings/subscription" className={linkClass}>
+                    View plans
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
           <button type="submit" disabled={loading} className={buttonClass}>
             {loading ? "Creating…" : "Create form"}
           </button>

@@ -4,6 +4,7 @@ import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/auth-card";
+import { PasswordInput } from "@/components/password-input";
 import { api, ApiError } from "@/lib/api";
 import { buttonClass, errorTextClass, inputClass, labelClass, linkClass, successTextClass } from "@/lib/ui";
 
@@ -59,15 +60,13 @@ function ResetPasswordContent() {
           <label htmlFor="newPassword" className={labelClass}>
             New password
           </label>
-          <input
+          <PasswordInput
             id="newPassword"
-            type="password"
             required
             minLength={8}
             maxLength={128}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className={inputClass}
             placeholder="At least 8 characters, with a letter and a number"
           />
         </div>
@@ -75,15 +74,13 @@ function ResetPasswordContent() {
           <label htmlFor="confirmPassword" className={labelClass}>
             Confirm new password
           </label>
-          <input
+          <PasswordInput
             id="confirmPassword"
-            type="password"
             required
             minLength={8}
             maxLength={128}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className={inputClass}
             placeholder="Re-enter your new password"
           />
         </div>

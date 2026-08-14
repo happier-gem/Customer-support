@@ -21,6 +21,7 @@ export function DashboardNav() {
       { href: "/feedback", label: "Feedback" },
       { href: "/settings/organization", label: "Organization" },
       { href: "/settings/team", label: "Team" },
+      { href: "/settings/subscription", label: "Subscription" },
     );
   }
 

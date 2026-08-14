@@ -35,7 +35,16 @@ export class AuthGatewayService {
           const payload = extractRpcErrorPayload(err);
           if (payload) {
             return throwError(
-              () => new HttpException({ statusCode: payload.statusCode, message: payload.message }, payload.statusCode),
+              () =>
+                new HttpException(
+                  {
+                    statusCode: payload.statusCode,
+                    message: payload.message,
+                    ...(payload.code ? { code: payload.code } : {}),
+                    ...(payload.data ? { data: payload.data } : {}),
+                  },
+                  payload.statusCode,
+                ),
             );
           }
           return throwError(() => new HttpException('Auth service unavailable', 503));

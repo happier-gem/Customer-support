@@ -5,6 +5,7 @@ import * as argon2 from 'argon2';
 import { ROLES, RpcAuthContext, TICKET_PRIORITIES, TICKET_STATUSES } from '@app/shared';
 import { TicketsService } from './tickets.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 /**
  * Integration tests against a real Postgres database (see ../../.env.test),
@@ -31,7 +32,7 @@ describe('TicketsService (integration — tenant isolation + RBAC)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-      providers: [TicketsService, PrismaService],
+      providers: [TicketsService, SubscriptionsService, PrismaService],
     }).compile();
 
     service = moduleRef.get(TicketsService);
@@ -61,8 +62,11 @@ describe('TicketsService (integration — tenant isolation + RBAC)', () => {
         },
       });
 
-    orgA = await prisma.organization.create({ data: { name: 'Company A' } });
-    orgB = await prisma.organization.create({ data: { name: 'Company B' } });
+    // PRO here (not the FREE default) so this suite's pre-Phase-6 assumption
+    // of unlimited ticket creation still holds; Phase 6's own ticket-limit
+    // behavior is covered in subscriptions/subscriptions.service.spec.ts.
+    orgA = await prisma.organization.create({ data: { name: 'Company A', plan: 'PRO' } });
+    orgB = await prisma.organization.create({ data: { name: 'Company B', plan: 'PRO' } });
 
     const [userOwnerA, userAgentA, userAgentA2, userInactiveAgentA, userCustomerA, userCustomerA2] = await Promise.all([
       mkUser(orgA.id, 'Owner A', ROLES.TENANT_OWNER),

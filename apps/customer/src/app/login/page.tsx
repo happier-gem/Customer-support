@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/auth-card";
+import { PasswordInput } from "@/components/password-input";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
 import { buttonClass, errorTextClass, inputClass, labelClass, linkClass } from "@/lib/ui";
@@ -56,13 +57,11 @@ export default function LoginPage() {
               Forgot password?
             </Link>
           </div>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
             placeholder="••••••••"
           />
         </div>

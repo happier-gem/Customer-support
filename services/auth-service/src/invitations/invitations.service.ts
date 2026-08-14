@@ -13,6 +13,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { generateSecureToken, hashToken } from '../auth/utils/token.util';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 const INVALID_INVITATION_ERROR = 'This invitation link is invalid or has expired.';
 
@@ -33,6 +34,7 @@ export class InvitationsService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   private get expiresInHours(): number {
@@ -63,6 +65,11 @@ export class InvitationsService {
     const organization = await this.prisma.organization.findUniqueOrThrow({
       where: { id: authContext.organizationId },
     });
+
+    // Soft pre-check (Part 7): rejects an obviously-futile invite early. Not
+    // the authoritative gate — a pending invitation doesn't consume a seat —
+    // so the real enforcement is the lock-protected check in accept() below.
+    await this.subscriptions.assertCanAddTeamMember(this.prisma, authContext.organizationId);
 
     const token = generateSecureToken();
     const tokenHash = hashToken(token);
@@ -152,6 +159,11 @@ export class InvitationsService {
 
     try {
       await this.prisma.$transaction(async (tx) => {
+        // Authoritative, lock-protected check: this is where a seat is
+        // actually consumed, so it must run inside this transaction (see
+        // TicketsService.create for why).
+        await this.subscriptions.assertCanAddTeamMember(tx, invitation.organizationId);
+
         await tx.user.create({
           data: {
             organizationId: invitation.organizationId,

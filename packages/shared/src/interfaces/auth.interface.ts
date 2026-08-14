@@ -47,4 +47,8 @@ export interface RpcErrorPayload {
   statusCode: number;
   message: string | string[];
   error?: string;
+  /** Machine-readable error code, e.g. PLAN_LIMIT_REACHED — set for Phase 6 plan-limit errors. */
+  code?: string;
+  /** Structured extra detail (e.g. PlanLimitErrorPayload fields) that survives the gateway hop verbatim. */
+  data?: Record<string, unknown>;
 }

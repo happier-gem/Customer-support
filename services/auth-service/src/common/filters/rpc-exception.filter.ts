@@ -16,10 +16,13 @@ export class RpcExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, _host: ArgumentsHost) {
     if (exception instanceof HttpException) {
       const response = exception.getResponse();
-      const message = typeof response === 'string' ? response : (response as { message?: string | string[] }).message;
+      const body = typeof response === 'string' ? undefined : (response as Record<string, unknown>);
+      const message = typeof response === 'string' ? response : (body?.message as string | string[] | undefined);
       const payload: RpcErrorPayload = {
         statusCode: exception.getStatus(),
         message: message ?? exception.message,
+        ...(body?.code ? { code: body.code as string } : {}),
+        ...(body?.data ? { data: body.data as Record<string, unknown> } : {}),
       };
       return throwError(() => new RpcException(payload));
     }

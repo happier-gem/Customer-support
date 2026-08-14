@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { DashboardNav } from "@/components/dashboard-nav";
@@ -12,6 +13,7 @@ import {
   errorTextClass,
   inputClass,
   labelClass,
+  linkClass,
   selectClass,
   successTextClass,
 } from "@/lib/ui";
@@ -38,6 +40,7 @@ export default function TeamSettingsPage() {
   const [inviteRole, setInviteRole] = useState<(typeof ASSIGNABLE_ROLES)[number]>("SUPPORT_AGENT");
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteLimitReached, setInviteLimitReached] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
 
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
@@ -80,6 +83,7 @@ export default function TeamSettingsPage() {
     e.preventDefault();
     if (!accessToken) return;
     setInviteError(null);
+    setInviteLimitReached(false);
     setInviteSuccess(null);
     setInviting(true);
     try {
@@ -89,6 +93,7 @@ export default function TeamSettingsPage() {
       await loadData();
     } catch (err) {
       setInviteError(err instanceof ApiError ? err.message : "Failed to send invitation.");
+      setInviteLimitReached(err instanceof ApiError && err.code === "PLAN_LIMIT_REACHED");
     } finally {
       setInviting(false);
     }
@@ -183,7 +188,19 @@ export default function TeamSettingsPage() {
               {inviting ? "Sending…" : "Send invite"}
             </button>
           </div>
-          {inviteError && <p className={errorTextClass}>{inviteError}</p>}
+          {inviteError && (
+            <p className={errorTextClass}>
+              {inviteError}
+              {inviteLimitReached && (
+                <>
+                  {" "}
+                  <Link href="/settings/subscription" className={linkClass}>
+                    View plans
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
           {inviteSuccess && <p className={successTextClass}>{inviteSuccess}</p>}
         </form>
 

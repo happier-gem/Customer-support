@@ -7,6 +7,7 @@ import { InvitationsService } from './invitations.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashToken } from '../auth/utils/token.util';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 /**
  * Phase 3 invitation lifecycle: only a Tenant Owner may invite into their
@@ -28,7 +29,7 @@ describe('InvitationsService (integration — RBAC + tenant isolation)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-      providers: [InvitationsService, MailService, PrismaService],
+      providers: [InvitationsService, MailService, SubscriptionsService, PrismaService],
     }).compile();
 
     service = moduleRef.get(InvitationsService);
@@ -45,8 +46,11 @@ describe('InvitationsService (integration — RBAC + tenant isolation)', () => {
     await prisma.organization.deleteMany({});
 
     const passwordHash = await argon2.hash('SomePassword1');
-    orgA = await prisma.organization.create({ data: { name: 'Company A' } });
-    orgB = await prisma.organization.create({ data: { name: 'Company B' } });
+    // PRO here (not the FREE default) so this suite's pre-Phase-6 assumption
+    // of unlimited team-member creation still holds; Phase 6's own
+    // team-member-limit behavior is covered in subscriptions/subscriptions.service.spec.ts.
+    orgA = await prisma.organization.create({ data: { name: 'Company A', plan: 'PRO' } });
+    orgB = await prisma.organization.create({ data: { name: 'Company B', plan: 'PRO' } });
 
     const userOwnerA = await prisma.user.create({
       data: {
@@ -176,7 +180,7 @@ describe('InvitationsService (integration — RBAC + tenant isolation)', () => {
 
       const moduleRef = await Test.createTestingModule({
         imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env.test' })],
-        providers: [InvitationsService, { provide: MailService, useValue: mailService }, PrismaService],
+        providers: [InvitationsService, { provide: MailService, useValue: mailService }, SubscriptionsService, PrismaService],
       }).compile();
 
       const isolatedService = moduleRef.get(InvitationsService);
