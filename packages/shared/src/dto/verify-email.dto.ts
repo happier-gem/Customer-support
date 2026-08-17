@@ -1,7 +1,9 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsEmail, Matches } from 'class-validator';
 
 export class VerifyEmailDto {
-  @IsString()
-  @MinLength(10)
-  token!: string;
+  @IsEmail()
+  email!: string;
+
+  @Matches(/^\d{6}$/, { message: 'otp must be a 6-digit code' })
+  otp!: string;
 }

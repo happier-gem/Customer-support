@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { AdminNav } from "@/components/admin-nav";
 import { api, ApiError, type AdminOrganization } from "@/lib/api";
 import { buttonClass, cardClass, dangerButtonClass, errorTextClass, planBadgeClass, statusBadgeClass } from "@/lib/ui";
 
@@ -57,12 +56,9 @@ export default function OrganizationDetailPage() {
 
   if (status === "loading" || (status === "authenticated" && loading)) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <AdminNav />
-        <main className="flex flex-1 items-center justify-center">
+              <main className="flex flex-1 items-center justify-center">
           <p className="text-sm text-gray-500">Loading…</p>
         </main>
-      </div>
     );
   }
 
@@ -70,19 +66,14 @@ export default function OrganizationDetailPage() {
 
   if (loadError || !org) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <AdminNav />
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
+              <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
           <p className={errorTextClass}>{loadError ?? "Organization not found."}</p>
         </main>
-      </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <AdminNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">{org.name}</h1>
@@ -132,12 +123,11 @@ export default function OrganizationDetailPage() {
           <button
             disabled={actioning}
             onClick={handleToggleSuspend}
-            className={org.isSuspended ? `${buttonClass} w-auto px-4` : `${dangerButtonClass} w-auto px-4`}
+            className={org.isSuspended ? `${buttonClass} w-auto! px-4` : `${dangerButtonClass} w-auto px-4`}
           >
             {actioning ? "Working…" : org.isSuspended ? "Activate Organization" : "Suspend Organization"}
           </button>
         </section>
       </main>
-    </div>
   );
 }

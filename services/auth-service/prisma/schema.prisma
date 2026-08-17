@@ -78,9 +78,19 @@ model User {
   /// A deactivated user can no longer log in.
   isActive Boolean @default(true)
 
-  emailVerified              Boolean   @default(false)
-  emailVerificationTokenHash String?
-  emailVerificationExpiresAt DateTime?
+  emailVerified Boolean @default(false)
+
+  /// OTP-based registration verification (Phase 10). A 6-digit code is
+  /// emailed at registration; only its SHA-256 hash is ever stored, mirroring
+  /// the hash-only-at-rest convention used for password reset below. Single-use:
+  /// cleared on success. `emailVerificationOtpAttempts` caps brute-force guesses
+  /// per issued code (see AuthService.verifyEmail); `emailVerificationOtpLastSentAt`
+  /// drives the resend cooldown (see AuthService.resendOtp). Password reset keeps
+  /// its own separate link-token flow below — unrelated to registration OTP.
+  emailVerificationOtpHash        String?
+  emailVerificationOtpExpiresAt   DateTime?
+  emailVerificationOtpAttempts    Int       @default(0)
+  emailVerificationOtpLastSentAt  DateTime?
 
   refreshTokenHash String?
 
@@ -103,7 +113,6 @@ model User {
   notifications Notification[] @relation("NotificationRecipient")
 
   @@index([organizationId])
-  @@index([emailVerificationTokenHash])
   @@index([passwordResetTokenHash])
   @@map("users")
 }

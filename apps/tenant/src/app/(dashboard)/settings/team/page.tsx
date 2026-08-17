@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { api, ApiError, type Invitation, type Member } from "@/lib/api";
 import {
   buttonClass,
@@ -14,6 +13,7 @@ import {
   inputClass,
   labelClass,
   linkClass,
+  secondaryButtonClass,
   selectClass,
   successTextClass,
 } from "@/lib/ui";
@@ -45,6 +45,13 @@ export default function TeamSettingsPage() {
 
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
+
+  // One-time-reveal invite links, keyed by invitation id. The server only ever
+  // returns the raw link at the moment an invitation is created or resent —
+  // listInvitations() never includes it, since only the token's hash is stored.
+  const [inviteUrls, setInviteUrls] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [busyInvitationId, setBusyInvitationId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -87,7 +94,8 @@ export default function TeamSettingsPage() {
     setInviteSuccess(null);
     setInviting(true);
     try {
-      await api.inviteMember(accessToken, { email: inviteEmail, role: inviteRole });
+      const created = await api.inviteMember(accessToken, { email: inviteEmail, role: inviteRole });
+      setInviteUrls((prev) => ({ ...prev, [created.id]: created.inviteUrl }));
       setInviteSuccess(`Invitation sent to ${inviteEmail}.`);
       setInviteEmail("");
       await loadData();
@@ -96,6 +104,47 @@ export default function TeamSettingsPage() {
       setInviteLimitReached(err instanceof ApiError && err.code === "PLAN_LIMIT_REACHED");
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleCopyLink(id: string) {
+    const url = inviteUrls[id];
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 2000);
+    } catch {
+      // Clipboard access denied/unavailable — nothing to recover from client-side.
+    }
+  }
+
+  async function handleResend(id: string) {
+    if (!accessToken) return;
+    setRowError(null);
+    setBusyInvitationId(id);
+    try {
+      const resent = await api.resendInvitation(accessToken, id);
+      setInviteUrls((prev) => ({ ...prev, [resent.id]: resent.inviteUrl }));
+      await loadData();
+    } catch (err) {
+      setRowError(err instanceof ApiError ? err.message : "Failed to resend invitation.");
+    } finally {
+      setBusyInvitationId(null);
+    }
+  }
+
+  async function handleRevoke(id: string) {
+    if (!accessToken) return;
+    setRowError(null);
+    setBusyInvitationId(id);
+    try {
+      await api.revokeInvitation(accessToken, id);
+      await loadData();
+    } catch (err) {
+      setRowError(err instanceof ApiError ? err.message : "Failed to revoke invitation.");
+    } finally {
+      setBusyInvitationId(null);
     }
   }
 
@@ -129,12 +178,9 @@ export default function TeamSettingsPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="flex flex-1 items-center justify-center">
+              <main className="flex flex-1 items-center justify-center">
           <p className="text-sm text-gray-500">Loading…</p>
         </main>
-      </div>
     );
   }
 
@@ -145,9 +191,7 @@ export default function TeamSettingsPage() {
   const pendingInvitations = invitations.filter((inv) => inv.status === "PENDING");
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <h1 className="text-xl font-semibold text-gray-900">Team members</h1>
 
         <form onSubmit={handleInvite} className={`${cardClass} space-y-4`}>
@@ -288,27 +332,61 @@ export default function TeamSettingsPage() {
                     <th className="py-2 pr-4">Role</th>
                     <th className="py-2 pr-4">Status</th>
                     <th className="py-2 pr-4">Expires</th>
+                    <th className="py-2 pr-4"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pendingInvitations.map((invitation) => (
-                    <tr key={invitation.id} className="border-b border-gray-100 last:border-0">
-                      <td className="py-2 pr-4 text-gray-900">{invitation.email}</td>
-                      <td className="py-2 pr-4 text-gray-600">{invitation.role}</td>
-                      <td className="py-2 pr-4">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${invitationStatusClass[invitation.status]}`}>
-                          {invitation.status}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4 text-gray-500">{new Date(invitation.expiresAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
+                  {pendingInvitations.map((invitation) => {
+                    const busy = busyInvitationId === invitation.id;
+                    const hasLink = Boolean(inviteUrls[invitation.id]);
+                    return (
+                      <tr key={invitation.id} className="border-b border-gray-100 last:border-0">
+                        <td className="py-2 pr-4 text-gray-900">{invitation.email}</td>
+                        <td className="py-2 pr-4 text-gray-600">{invitation.role}</td>
+                        <td className="py-2 pr-4">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${invitationStatusClass[invitation.status]}`}>
+                            {invitation.status}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-4 text-gray-500">{new Date(invitation.expiresAt).toLocaleDateString()}</td>
+                        <td className="py-2 pr-4">
+                          <div className="flex items-center justify-end gap-2">
+                            {hasLink && (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => handleCopyLink(invitation.id)}
+                                className={`${secondaryButtonClass} w-auto px-2 py-1 text-xs`}
+                              >
+                                {copiedId === invitation.id ? "Copied!" : "Copy link"}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleResend(invitation.id)}
+                              className={`${secondaryButtonClass} w-auto px-2 py-1 text-xs`}
+                            >
+                              {busy ? "…" : "Resend"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleRevoke(invitation.id)}
+                              className={`${dangerButtonClass} w-auto px-2 py-1 text-xs`}
+                            >
+                              {busy ? "…" : "Revoke"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </section>
         )}
       </main>
-    </div>
   );
 }

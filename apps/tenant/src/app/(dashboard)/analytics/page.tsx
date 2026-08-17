@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { MonthlyTicketsChart } from "@/components/monthly-tickets-chart";
 import { api, ApiError, type AnalyticsOverview } from "@/lib/api";
 import { cardClass, errorTextClass, formatDurationMinutes } from "@/lib/ui";
@@ -56,12 +55,9 @@ export default function AnalyticsPage() {
 
   if (status === "loading" || (status === "authenticated" && user?.role === "TENANT_OWNER" && loading)) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="flex flex-1 items-center justify-center">
+              <main className="flex flex-1 items-center justify-center">
           <p className="text-sm text-gray-500">Loading analytics…</p>
         </main>
-      </div>
     );
   }
 
@@ -71,13 +67,10 @@ export default function AnalyticsPage() {
 
   if (loadError) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
+              <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
           <h1 className="mb-6 text-xl font-semibold text-gray-900">Analytics</h1>
           <p className={errorTextClass}>Unable to load analytics. {loadError}</p>
         </main>
-      </div>
     );
   }
 
@@ -88,9 +81,7 @@ export default function AnalyticsPage() {
   const hasTicketData = overview.ticketsCreatedPerMonth.some((m) => m.count > 0);
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <h1 className="text-xl font-semibold text-gray-900">Analytics</h1>
 
         <section className={cardClass}>
@@ -139,6 +130,5 @@ export default function AnalyticsPage() {
           </div>
         </section>
       </main>
-    </div>
   );
 }

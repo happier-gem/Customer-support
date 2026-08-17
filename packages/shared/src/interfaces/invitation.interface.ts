@@ -24,3 +24,13 @@ export interface InvitationPreviewDto {
   role: Role;
   expiresAt: string;
 }
+
+/**
+ * Returned only from create/resend — a one-time reveal of the invite link,
+ * mirroring the fact that the invitee's email already receives this same
+ * link. `list()` never includes this field: the raw token is never
+ * recoverable afterward, only its hash is stored.
+ */
+export interface CreatedInvitationDto extends InvitationDto {
+  inviteUrl: string;
+}

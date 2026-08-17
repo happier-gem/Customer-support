@@ -63,12 +63,12 @@ export class MailService {
     }
   }
 
-  async sendVerificationEmail(to: string, verificationUrl: string): Promise<void> {
+  async sendOtpEmail(to: string, otp: string): Promise<void> {
     await this.sendMail({
       to,
-      subject: 'Verify your email address',
-      text: `Welcome! Please verify your email by visiting: ${verificationUrl}`,
-      html: `<p>Welcome! Please verify your email by clicking the link below:</p><p><a href="${verificationUrl}">${verificationUrl}</a></p>`,
+      subject: 'Your verification code',
+      text: `Welcome! Your verification code is ${otp}. It expires in 10 minutes and can only be used once.`,
+      html: `<p>Welcome! Your verification code is:</p><p style="font-size:28px;font-weight:600;letter-spacing:4px;">${otp}</p><p>It expires in 10 minutes and can only be used once.</p>`,
     });
   }
 

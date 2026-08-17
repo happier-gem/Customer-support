@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type Paginated, type Ticket, type TicketStatus } from "@/lib/api";
+import { useTicketSocket } from "@/lib/use-ticket-socket";
 import { buttonClass, cardClass, errorTextClass, formatStatusLabel, priorityBadgeClass, secondaryButtonClass, selectClass, statusBadgeClass } from "@/lib/ui";
 
 const STATUS_OPTIONS: TicketStatus[] = ["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTOMER", "RESOLVED", "CLOSED"];
@@ -44,6 +44,13 @@ export default function TicketsPage() {
     load();
   }, [load]);
 
+  const { connected } = useTicketSocket(accessToken, () => {
+    // Any create/update/attachment event just refetches the current page —
+    // ticket lists are small/paginated, so a full refetch is simpler and
+    // still cheap, rather than surgically patching individual rows.
+    load();
+  });
+
   if (status === "loading" || !user) {
     return (
       <main className="flex flex-1 items-center justify-center bg-gray-50">
@@ -53,12 +60,19 @@ export default function TicketsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-4xl flex-1 space-y-4 px-4 py-8">
+          <main className="mx-auto w-full max-w-4xl flex-1 space-y-4 px-4 py-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">My Tickets</h1>
-          <Link href="/tickets/new" className={`${buttonClass} w-auto px-4`}>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold text-gray-900">My Tickets</h1>
+            <span
+              className="flex items-center gap-1 text-xs text-gray-400"
+              title={connected ? "Live updates connected" : "Live updates unavailable"}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-green-500" : "bg-gray-300"}`} />
+              {connected ? "Live" : "Offline"}
+            </span>
+          </div>
+          <Link href="/tickets/new" className={`${buttonClass} w-auto! px-4`}>
             New Ticket
           </Link>
         </div>
@@ -94,8 +108,14 @@ export default function TicketsPage() {
                 <li key={ticket.id}>
                   <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-gray-50">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-gray-900">{ticket.title}</p>
-                      <p className="text-xs text-gray-500">Opened {new Date(ticket.createdAt).toLocaleDateString()}</p>
+                      <p className="truncate text-sm font-medium text-gray-900">
+                        {ticket.title} <span className="font-normal text-gray-400">#{ticket.id.slice(0, 8)}</span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Opened {new Date(ticket.createdAt).toLocaleDateString()} · Updated{" "}
+                        {new Date(ticket.updatedAt).toLocaleDateString()}
+                        {ticket.assignedAgent && ` · Agent: ${ticket.assignedAgent.name}`}
+                      </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
@@ -132,6 +152,5 @@ export default function TicketsPage() {
           </div>
         )}
       </main>
-    </div>
   );
 }

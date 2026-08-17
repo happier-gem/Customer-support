@@ -28,4 +28,14 @@ export class InvitationsController {
   accept(@Payload() data: { token: string; name: string; password: string }) {
     return this.invitationsService.accept(data.token, data.name, data.password);
   }
+
+  @MessagePattern(INVITATION_PATTERNS.REVOKE)
+  revoke(@Payload() data: { authContext: RpcAuthContext; invitationId: string }) {
+    return this.invitationsService.revoke(data.authContext, data.invitationId);
+  }
+
+  @MessagePattern(INVITATION_PATTERNS.RESEND)
+  resend(@Payload() data: { authContext: RpcAuthContext; invitationId: string }) {
+    return this.invitationsService.resend(data.authContext, data.invitationId);
+  }
 }

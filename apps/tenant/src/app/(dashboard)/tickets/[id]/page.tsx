@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, API_BASE, NEXT_STATUSES, type Member, type TicketDetail, type TicketStatus } from "@/lib/api";
 import {
@@ -131,12 +130,9 @@ export default function TenantTicketDetailPage() {
 
   if (error || !ticket) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+              <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
           <p className={errorTextClass}>{error ?? "Ticket not found."}</p>
         </main>
-      </div>
     );
   }
 
@@ -145,9 +141,7 @@ export default function TenantTicketDetailPage() {
   const availableNextStatuses = NEXT_STATUSES[ticket.status];
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <div className={`${cardClass} space-y-3`}>
           <div className="flex items-start justify-between gap-4">
             <h1 className="text-lg font-semibold text-gray-900">{ticket.title}</h1>
@@ -271,6 +265,5 @@ export default function TenantTicketDetailPage() {
           Back to tickets
         </button>
       </main>
-    </div>
   );
 }

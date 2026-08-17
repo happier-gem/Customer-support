@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { api, ApiError, type PlanType, type Subscription, type SubscriptionPlan } from "@/lib/api";
 import { buttonClass, cardClass, errorTextClass, secondaryButtonClass, successTextClass } from "@/lib/ui";
 
@@ -98,12 +97,9 @@ export default function SubscriptionSettingsPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="flex flex-1 items-center justify-center">
+              <main className="flex flex-1 items-center justify-center">
           <p className="text-sm text-gray-500">Loading…</p>
         </main>
-      </div>
     );
   }
 
@@ -115,9 +111,7 @@ export default function SubscriptionSettingsPage() {
   const currentIndex = PLAN_ORDER.indexOf(subscription.plan);
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <h1 className="text-xl font-semibold text-gray-900">Subscription</h1>
 
         <section className={`${cardClass} space-y-4`}>
@@ -175,6 +169,5 @@ export default function SubscriptionSettingsPage() {
           </p>
         </section>
       </main>
-    </div>
   );
 }

@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { INVITATION_PATTERNS, InvitationDto, InviteMemberDto, ROLES } from '@app/shared';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { CreatedInvitationDto, INVITATION_PATTERNS, InvitationDto, InviteMemberDto, ROLES } from '@app/shared';
 import { AuthGatewayService } from '../auth/auth-gateway.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -26,10 +26,26 @@ export class TeamInvitationsController {
 
   @Post()
   async create(@Body() dto: InviteMemberDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.authGateway.send<InvitationDto>(INVITATION_PATTERNS.CREATE, {
+    return this.authGateway.send<CreatedInvitationDto>(INVITATION_PATTERNS.CREATE, {
       authContext: user,
       email: dto.email,
       role: dto.role,
+    });
+  }
+
+  @Post(':id/revoke')
+  async revoke(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<InvitationDto>(INVITATION_PATTERNS.REVOKE, {
+      authContext: user,
+      invitationId: id,
+    });
+  }
+
+  @Post(':id/resend')
+  async resend(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<CreatedInvitationDto>(INVITATION_PATTERNS.RESEND, {
+      authContext: user,
+      invitationId: id,
     });
   }
 }

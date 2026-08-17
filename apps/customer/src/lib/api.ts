@@ -226,10 +226,16 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  verifyEmail: (token: string) =>
+  verifyEmail: (email: string, otp: string) =>
     request<{ message: string }>("/auth/verify-email", {
       method: "POST",
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ email, otp }),
+    }),
+
+  resendOtp: (email: string) =>
+    request<{ message: string; retryAfterSeconds?: number }>("/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
     }),
 
   login: (body: { email: string; password: string }) =>

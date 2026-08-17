@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import {
   api,
@@ -182,19 +181,14 @@ export default function FeedbackFormBuilderPage() {
 
   if (error || !form) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
+              <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
           <p className={errorTextClass}>{error ?? "Feedback form not found."}</p>
         </main>
-      </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <div className={`${cardClass} space-y-3`}>
           <div className="flex items-start justify-between gap-4">
             {editingDetails ? (
@@ -215,7 +209,7 @@ export default function FeedbackFormBuilderPage() {
                   ))}
                 </select>
                 <div className="flex gap-2">
-                  <button disabled={busy} onClick={handleSaveDetails} className={`${buttonClass} w-auto px-4`}>
+                  <button disabled={busy} onClick={handleSaveDetails} className={`${buttonClass} w-auto! px-4`}>
                     Save
                   </button>
                   <button disabled={busy} onClick={() => setEditingDetails(false)} className={`${secondaryButtonClass} w-auto`}>
@@ -246,7 +240,7 @@ export default function FeedbackFormBuilderPage() {
                 disabled={busy || form.questions.length === 0}
                 title={form.questions.length === 0 ? "Add at least one question before activating" : undefined}
                 onClick={() => runAction(() => api.updateFeedbackFormStatus(accessToken!, form.id, "ACTIVE"), "Form activated.")}
-                className={`${buttonClass} w-auto px-4`}
+                className={`${buttonClass} w-auto! px-4`}
               >
                 Activate
               </button>
@@ -315,7 +309,7 @@ export default function FeedbackFormBuilderPage() {
                       </div>
                     )}
                     <div className="flex gap-2">
-                      <button disabled={busy} onClick={() => handleSaveQuestion(question)} className={`${buttonClass} w-auto px-4`}>
+                      <button disabled={busy} onClick={() => handleSaveQuestion(question)} className={`${buttonClass} w-auto! px-4`}>
                         Save
                       </button>
                       <button disabled={busy} onClick={() => setEditingQuestionId(null)} className={`${secondaryButtonClass} w-auto`}>
@@ -377,7 +371,7 @@ export default function FeedbackFormBuilderPage() {
                 </div>
               )}
               <div className="flex gap-2">
-                <button disabled={busy || newQuestionLabel.trim().length < 3} onClick={handleAddQuestion} className={`${buttonClass} w-auto px-4`}>
+                <button disabled={busy || newQuestionLabel.trim().length < 3} onClick={handleAddQuestion} className={`${buttonClass} w-auto! px-4`}>
                   Add
                 </button>
                 <button disabled={busy} onClick={() => setShowAddQuestion(false)} className={`${secondaryButtonClass} w-auto`}>
@@ -429,7 +423,7 @@ export default function FeedbackFormBuilderPage() {
                   Previous
                 </button>
                 <button
-                  className={`${buttonClass} w-auto px-4`}
+                  className={`${buttonClass} w-auto! px-4`}
                   disabled={responsePage >= responses.pagination.totalPages}
                   onClick={() => setResponsePage((p) => p + 1)}
                 >
@@ -444,6 +438,5 @@ export default function FeedbackFormBuilderPage() {
           Back to feedback forms
         </button>
       </main>
-    </div>
   );
 }

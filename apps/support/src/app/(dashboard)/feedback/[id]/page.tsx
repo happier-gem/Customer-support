@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type FeedbackResponse, type Paginated } from "@/lib/api";
 import { buttonClass, cardClass, errorTextClass, secondaryButtonClass } from "@/lib/ui";
@@ -48,9 +47,7 @@ export default function SupportFeedbackResponsesPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-8">
         <h1 className="text-lg font-semibold text-gray-900">Responses ({responses?.pagination.total ?? 0})</h1>
 
         {error && <p className={errorTextClass}>{error}</p>}
@@ -100,7 +97,7 @@ export default function SupportFeedbackResponsesPage() {
                 Previous
               </button>
               <button
-                className={`${buttonClass} w-auto px-4`}
+                className={`${buttonClass} w-auto! px-4`}
                 disabled={page >= responses.pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -114,6 +111,5 @@ export default function SupportFeedbackResponsesPage() {
           Back to feedback
         </button>
       </main>
-    </div>
   );
 }

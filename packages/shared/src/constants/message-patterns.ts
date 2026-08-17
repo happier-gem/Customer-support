@@ -3,6 +3,7 @@ export const AUTH_PATTERNS = {
   REGISTER: 'auth.register',
   REGISTER_CUSTOMER: 'auth.register-customer',
   VERIFY_EMAIL: 'auth.verify-email',
+  RESEND_OTP: 'auth.resend-otp',
   LOGIN: 'auth.login',
   REFRESH: 'auth.refresh',
   LOGOUT: 'auth.logout',
@@ -34,6 +35,8 @@ export const INVITATION_PATTERNS = {
   LIST: 'invitations.list',
   VALIDATE: 'invitations.validate',
   ACCEPT: 'invitations.accept',
+  REVOKE: 'invitations.revoke',
+  RESEND: 'invitations.resend',
 } as const;
 
 /** TCP message patterns for the Phase 4 ticketing system, served by the auth-service. */

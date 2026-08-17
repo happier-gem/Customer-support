@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { linkClass } from "@/lib/ui";
 
 export default function DashboardPage() {
@@ -30,9 +29,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
+    <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
         <div className="w-full max-w-md space-y-4 rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Welcome, {user.name}</h1>
@@ -69,7 +66,6 @@ export default function DashboardPage() {
             Tickets, feedback, and analytics arrive in later phases.
           </p>
         </div>
-      </main>
-    </div>
+    </main>
   );
 }

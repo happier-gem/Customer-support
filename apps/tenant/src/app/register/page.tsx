@@ -2,19 +2,20 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/auth-card";
 import { PasswordInput } from "@/components/password-input";
 import { api, ApiError } from "@/lib/api";
-import { buttonClass, errorTextClass, inputClass, labelClass, linkClass, successTextClass } from "@/lib/ui";
+import { buttonClass, errorTextClass, inputClass, labelClass, linkClass } from "@/lib/ui";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [organizationName, setOrganizationName] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -22,25 +23,11 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await api.register({ organizationName, name, email, password });
-      setSuccess(true);
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
-    } finally {
       setLoading(false);
     }
-  }
-
-  if (success) {
-    return (
-      <AuthCard title="Check your email" subtitle="We sent a verification link to your inbox.">
-        <p className={successTextClass}>
-          Registration successful. Please check {email} for a link to verify your account before logging in.
-        </p>
-        <Link href="/login" className={`${linkClass} block text-center text-sm`}>
-          Back to sign in
-        </Link>
-      </AuthCard>
-    );
   }
 
   return (

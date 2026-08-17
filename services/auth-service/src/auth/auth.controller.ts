@@ -7,6 +7,7 @@ import {
   RegisterCustomerDto,
   LoginDto,
   VerifyEmailDto,
+  ResendOtpDto,
   ForgotPasswordDto,
   ResetPasswordDto,
 } from '@app/shared';
@@ -30,6 +31,11 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.VERIFY_EMAIL)
   verifyEmail(@Payload() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.RESEND_OTP)
+  resendOtp(@Payload() dto: ResendOtpDto) {
+    return this.authService.resendOtp(dto);
   }
 
   @MessagePattern(AUTH_PATTERNS.LOGIN)

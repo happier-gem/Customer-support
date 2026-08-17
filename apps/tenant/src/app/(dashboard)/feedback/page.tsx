@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type FeedbackCategory, type FeedbackFormSummary, type Paginated } from "@/lib/api";
 import { buttonClass, cardClass, errorTextClass, secondaryButtonClass, selectClass, statusBadgeClass } from "@/lib/ui";
@@ -51,12 +50,10 @@ export default function FeedbackFormsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
+          <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-gray-900">Feedback Forms</h1>
-          <Link href="/feedback/new" className={`${buttonClass} w-auto px-4`}>
+          <Link href="/feedback/new" className={`${buttonClass} w-auto! px-4`}>
             New form
           </Link>
         </div>
@@ -126,7 +123,7 @@ export default function FeedbackFormsPage() {
                 Previous
               </button>
               <button
-                className={`${buttonClass} w-auto px-4`}
+                className={`${buttonClass} w-auto! px-4`}
                 disabled={page >= result.pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -136,6 +133,5 @@ export default function FeedbackFormsPage() {
           </div>
         )}
       </main>
-    </div>
   );
 }

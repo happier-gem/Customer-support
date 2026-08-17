@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import {
   api,
@@ -13,6 +12,7 @@ import {
   type TicketDetail,
   type TicketStatus,
 } from "@/lib/api";
+import { useTicketSocket } from "@/lib/use-ticket-socket";
 import {
   buttonClass,
   cardClass,
@@ -92,6 +92,11 @@ export default function TicketDetailPage() {
     load();
   }, [load]);
 
+  const { connected } = useTicketSocket(accessToken, (_event, payload) => {
+    const eventTicketId = payload.ticket?.id ?? payload.ticketId;
+    if (eventTicketId === params.id) load();
+  });
+
   async function runAction(action: () => Promise<unknown>, successText: string) {
     setActionError(null);
     setActionMessage(null);
@@ -139,12 +144,9 @@ export default function TicketDetailPage() {
 
   if (error || !ticket) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+              <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
           <p className={errorTextClass}>{error ?? "Ticket not found."}</p>
         </main>
-      </div>
     );
   }
 
@@ -154,17 +156,25 @@ export default function TicketDetailPage() {
   const availableNextStatuses = NEXT_STATUSES[ticket.status];
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <div className={`${cardClass} space-y-3`}>
           <div className="flex items-start justify-between gap-4">
-            <h1 className="text-lg font-semibold text-gray-900">{ticket.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-gray-900">{ticket.title}</h1>
+              <span
+                className="flex items-center gap-1 text-xs text-gray-400"
+                title={connected ? "Live updates connected" : "Live updates unavailable"}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-green-500" : "bg-gray-300"}`} />
+                {connected ? "Live" : "Offline"}
+              </span>
+            </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
               <span className={statusBadgeClass(ticket.status)}>{formatStatusLabel(ticket.status)}</span>
             </div>
           </div>
+          <p className="text-xs text-gray-400">Ticket #{ticket.id.slice(0, 8)}</p>
           <p className="whitespace-pre-wrap text-sm text-gray-700">{ticket.description}</p>
           <dl className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3 text-xs text-gray-500">
             <div>
@@ -185,6 +195,18 @@ export default function TicketDetailPage() {
               <dt className="font-medium text-gray-600">Last updated</dt>
               <dd>{new Date(ticket.updatedAt).toLocaleString()}</dd>
             </div>
+            {ticket.resolvedAt && (
+              <div>
+                <dt className="font-medium text-gray-600">Resolved</dt>
+                <dd>{new Date(ticket.resolvedAt).toLocaleString()}</dd>
+              </div>
+            )}
+            {ticket.closedAt && (
+              <div>
+                <dt className="font-medium text-gray-600">Closed</dt>
+                <dd>{new Date(ticket.closedAt).toLocaleString()}</dd>
+              </div>
+            )}
           </dl>
         </div>
 
@@ -196,7 +218,7 @@ export default function TicketDetailPage() {
                 <button
                   disabled={busy}
                   onClick={() => runAction(() => api.assignSelf(accessToken!, ticket.id), "Ticket picked up.")}
-                  className={`${buttonClass} w-auto px-4`}
+                  className={`${buttonClass} w-auto! px-4`}
                 >
                   Pick up ticket
                 </button>
@@ -290,6 +312,5 @@ export default function TicketDetailPage() {
           Back to tickets
         </button>
       </main>
-    </div>
   );
 }

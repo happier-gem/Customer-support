@@ -84,6 +84,11 @@ export interface Invitation {
   createdAt: string;
 }
 
+/** Only returned from inviteMember/resendInvitation — a one-time reveal, never present in listInvitations(). */
+export interface CreatedInvitation extends Invitation {
+  inviteUrl: string;
+}
+
 export interface InvitationPreview {
   organizationName: string;
   email: string;
@@ -319,10 +324,16 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  verifyEmail: (token: string) =>
+  verifyEmail: (email: string, otp: string) =>
     request<{ message: string }>("/auth/verify-email", {
       method: "POST",
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ email, otp }),
+    }),
+
+  resendOtp: (email: string) =>
+    request<{ message: string; retryAfterSeconds?: number }>("/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
     }),
 
   login: (body: { email: string; password: string }) =>
@@ -390,10 +401,22 @@ export const api = {
     request<Invitation[]>("/organizations/me/invitations", { headers: authHeader(accessToken) }),
 
   inviteMember: (accessToken: string, body: { email: string; role: string }) =>
-    request<Invitation>("/organizations/me/invitations", {
+    request<CreatedInvitation>("/organizations/me/invitations", {
       method: "POST",
       headers: authHeader(accessToken),
       body: JSON.stringify(body),
+    }),
+
+  revokeInvitation: (accessToken: string, id: string) =>
+    request<Invitation>(`/organizations/me/invitations/${encodeURIComponent(id)}/revoke`, {
+      method: "POST",
+      headers: authHeader(accessToken),
+    }),
+
+  resendInvitation: (accessToken: string, id: string) =>
+    request<CreatedInvitation>(`/organizations/me/invitations/${encodeURIComponent(id)}/resend`, {
+      method: "POST",
+      headers: authHeader(accessToken),
     }),
 
   validateInvitation: (token: string) =>

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type FeedbackAnswerInput, type FeedbackFormDetail } from "@/lib/api";
 import { buttonClass, cardClass, errorTextClass, inputClass, labelClass, secondaryButtonClass, successTextClass } from "@/lib/ui";
@@ -80,38 +79,30 @@ export default function CustomerFeedbackFormPage() {
 
   if (error || !form) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+              <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
           <p className={errorTextClass}>{error ?? "This feedback form isn't available."}</p>
           <button onClick={() => router.push("/feedback")} className={`${secondaryButtonClass} mt-4 w-auto`}>
             Back to feedback
           </button>
         </main>
-      </div>
     );
   }
 
   if (submitted) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+              <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
           <div className={`${cardClass} space-y-3 text-center`}>
             <p className={successTextClass}>Thank you — your feedback has been submitted.</p>
-            <button onClick={() => router.push("/feedback")} className={`${buttonClass} w-auto px-4`}>
+            <button onClick={() => router.push("/feedback")} className={`${buttonClass} w-auto! px-4`}>
               Back to feedback
             </button>
           </div>
         </main>
-      </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">{form.title}</h1>
           {form.description && <p className="mt-1 text-sm text-gray-600">{form.description}</p>}
@@ -165,6 +156,5 @@ export default function CustomerFeedbackFormPage() {
           </button>
         </div>
       </main>
-    </div>
   );
 }

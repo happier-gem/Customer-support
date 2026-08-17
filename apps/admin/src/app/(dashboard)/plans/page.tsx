@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { AdminNav } from "@/components/admin-nav";
 import { api, ApiError, type SubscriptionPlan } from "@/lib/api";
 import { cardClass, errorTextClass, planBadgeClass } from "@/lib/ui";
 
@@ -42,21 +41,16 @@ export default function PlansPage() {
 
   if (status === "loading" || (status === "authenticated" && loading)) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <AdminNav />
-        <main className="flex flex-1 items-center justify-center">
+              <main className="flex flex-1 items-center justify-center">
           <p className="text-sm text-gray-500">Loading…</p>
         </main>
-      </div>
     );
   }
 
   if (!user) return null;
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <AdminNav />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Subscription Plans</h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -90,6 +84,5 @@ export default function PlansPage() {
           </div>
         )}
       </main>
-    </div>
   );
 }

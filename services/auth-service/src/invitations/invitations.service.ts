@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Invitation, Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import {
   ASSIGNABLE_TEAM_ROLES,
   AssignableTeamRole,
+  CreatedInvitationDto,
   InvitationDto,
   InvitationPreviewDto,
   NOTIFICATION_TYPES,
@@ -45,19 +46,17 @@ export class InvitationsService {
   }
 
   /**
-   * Only a Tenant Owner may invite, and only into their own
-   * (`authContext.organizationId`) organization — the org is never taken
-   * from client input, so Organization A's owner cannot mint an invitation
-   * for Organization B.
+   * Shared by create() and resend(): generates a fresh token, supersedes any
+   * other still-pending invite for the same email in this org, persists the
+   * new row, and emails the link. `inviteUrl` is returned once here — the
+   * only place the raw token is ever recoverable, since only its hash is
+   * stored (mirrors the fact that the invitee's email already gets it).
    */
-  async create(authContext: RpcAuthContext, email: string, role: AssignableTeamRole): Promise<InvitationDto> {
-    if (authContext.role !== ROLES.TENANT_OWNER) {
-      throw new ForbiddenException('Only a tenant owner can invite teammates.');
-    }
-    if (!ASSIGNABLE_TEAM_ROLES.includes(role)) {
-      throw new BadRequestException('Invalid role.');
-    }
-
+  private async issueInvitation(
+    authContext: RpcAuthContext,
+    email: string,
+    role: AssignableTeamRole,
+  ): Promise<CreatedInvitationDto> {
     const normalizedEmail = email.trim().toLowerCase();
 
     const existingUser = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -101,7 +100,70 @@ export class InvitationsService {
     const inviteUrl = `${this.config.get<string>('FRONTEND_URL')}/invite/accept?token=${token}`;
     await this.mail.sendInvitationEmail(normalizedEmail, organization.name, role, inviteUrl);
 
-    return toDto(invitation);
+    return { ...toDto(invitation), inviteUrl };
+  }
+
+  /**
+   * Only a Tenant Owner may invite, and only into their own
+   * (`authContext.organizationId`) organization — the org is never taken
+   * from client input, so Organization A's owner cannot mint an invitation
+   * for Organization B.
+   */
+  async create(authContext: RpcAuthContext, email: string, role: AssignableTeamRole): Promise<CreatedInvitationDto> {
+    if (authContext.role !== ROLES.TENANT_OWNER) {
+      throw new ForbiddenException('Only a tenant owner can invite teammates.');
+    }
+    if (!ASSIGNABLE_TEAM_ROLES.includes(role)) {
+      throw new BadRequestException('Invalid role.');
+    }
+
+    return this.issueInvitation(authContext, email, role);
+  }
+
+  private async getInvitationInOwnOrg(authContext: RpcAuthContext, invitationId: string): Promise<Invitation> {
+    const invitation = await this.prisma.invitation.findUnique({ where: { id: invitationId } });
+    // 404, not 403, on a cross-tenant id — same tenant-probing-prevention
+    // rationale as MembersService.getMemberInOwnOrg.
+    if (!invitation || invitation.organizationId !== authContext.organizationId) {
+      throw new NotFoundException('Invitation not found.');
+    }
+    return invitation;
+  }
+
+  /** Only a still-PENDING invitation can be revoked; the org is always the caller's own. */
+  async revoke(authContext: RpcAuthContext, invitationId: string): Promise<InvitationDto> {
+    if (authContext.role !== ROLES.TENANT_OWNER) {
+      throw new ForbiddenException('Only a tenant owner can revoke invitations.');
+    }
+
+    const invitation = await this.getInvitationInOwnOrg(authContext, invitationId);
+    if (invitation.status !== 'PENDING') {
+      throw new BadRequestException('Only a pending invitation can be revoked.');
+    }
+
+    const updated = await this.prisma.invitation.update({
+      where: { id: invitation.id },
+      data: { status: 'REVOKED' },
+    });
+    return toDto(updated);
+  }
+
+  /**
+   * Re-issues a new link for a still-PENDING invitation, using its existing
+   * email/role (never client-supplied) — the old link stops working the
+   * moment the new one is superseded in via issueInvitation().
+   */
+  async resend(authContext: RpcAuthContext, invitationId: string): Promise<CreatedInvitationDto> {
+    if (authContext.role !== ROLES.TENANT_OWNER) {
+      throw new ForbiddenException('Only a tenant owner can resend invitations.');
+    }
+
+    const invitation = await this.getInvitationInOwnOrg(authContext, invitationId);
+    if (invitation.status !== 'PENDING') {
+      throw new BadRequestException('Only a pending invitation can be resent.');
+    }
+
+    return this.issueInvitation(authContext, invitation.email, invitation.role as AssignableTeamRole);
   }
 
   async list(authContext: RpcAuthContext): Promise<InvitationDto[]> {

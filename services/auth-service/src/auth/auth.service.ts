@@ -18,13 +18,14 @@ import {
   RegisterCustomerDto,
   LoginDto,
   VerifyEmailDto,
+  ResendOtpDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   PublicUser,
   ROLES,
   TokenPair,
 } from '@app/shared';
-import { generateSecureToken, hashToken, safeCompareHex } from './utils/token.util';
+import { generateSecureToken, generateOtp, hashToken, safeCompareHex } from './utils/token.util';
 
 function toPublicUser(user: User): PublicUser {
   return {
@@ -40,6 +41,17 @@ function toPublicUser(user: User): PublicUser {
 const GENERIC_AUTH_ERROR = 'Invalid email or password';
 const GENERIC_TOKEN_ERROR = 'Invalid or expired token';
 const GENERIC_FORGOT_PASSWORD_MESSAGE = 'If an account with that email exists, a password reset link has been sent.';
+
+// Phase 10: OTP-based registration email verification (replaces the old
+// link-token flow — see the User model comment in schema.prisma).
+const OTP_EXPIRES_IN_MINUTES = 10;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_RESEND_COOLDOWN_SECONDS = 60;
+// Deliberately identical whether the account doesn't exist, is already
+// verified, or has no OTP pending — never lets a caller distinguish these
+// (Step 18: don't expose whether sensitive account information exists).
+const GENERIC_OTP_ERROR = 'Invalid or expired verification code.';
+const GENERIC_RESEND_MESSAGE = 'If that account needs verification, a new code has been sent.';
 
 @Injectable()
 export class AuthService {
@@ -97,10 +109,10 @@ export class AuthService {
     }
 
     const passwordHash = await argon2.hash(dto.password);
-    const verificationToken = generateSecureToken();
-    const verificationTokenHash = hashToken(verificationToken);
-    const expiresInMinutes = Number(this.config.get<string>('EMAIL_VERIFICATION_EXPIRES_IN_MINUTES') ?? 60);
-    const emailVerificationExpiresAt = new Date(Date.now() + expiresInMinutes * 60_000);
+    const otp = generateOtp();
+    const otpHash = hashToken(otp);
+    const now = new Date();
+    const emailVerificationOtpExpiresAt = new Date(now.getTime() + OTP_EXPIRES_IN_MINUTES * 60_000);
 
     let organizationId: string;
     let userId: string;
@@ -117,8 +129,10 @@ export class AuthService {
             name: dto.name.trim(),
             email,
             passwordHash,
-            emailVerificationTokenHash: verificationTokenHash,
-            emailVerificationExpiresAt,
+            emailVerificationOtpHash: otpHash,
+            emailVerificationOtpExpiresAt,
+            emailVerificationOtpAttempts: 0,
+            emailVerificationOtpLastSentAt: now,
           },
         });
 
@@ -134,11 +148,10 @@ export class AuthService {
       throw err;
     }
 
-    const verificationUrl = `${this.config.get<string>('FRONTEND_URL')}/verify-email?token=${verificationToken}`;
-    await this.mail.sendVerificationEmail(email, verificationUrl);
+    await this.mail.sendOtpEmail(email, otp);
 
     return {
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'Registration successful. Please check your email for a verification code.',
       organizationId,
       userId,
     };
@@ -164,10 +177,10 @@ export class AuthService {
     }
 
     const passwordHash = await argon2.hash(dto.password);
-    const verificationToken = generateSecureToken();
-    const verificationTokenHash = hashToken(verificationToken);
-    const expiresInMinutes = Number(this.config.get<string>('EMAIL_VERIFICATION_EXPIRES_IN_MINUTES') ?? 60);
-    const emailVerificationExpiresAt = new Date(Date.now() + expiresInMinutes * 60_000);
+    const otp = generateOtp();
+    const otpHash = hashToken(otp);
+    const now = new Date();
+    const emailVerificationOtpExpiresAt = new Date(now.getTime() + OTP_EXPIRES_IN_MINUTES * 60_000);
 
     let userId: string;
     try {
@@ -178,8 +191,10 @@ export class AuthService {
           email,
           passwordHash,
           role: ROLES.CUSTOMER,
-          emailVerificationTokenHash: verificationTokenHash,
-          emailVerificationExpiresAt,
+          emailVerificationOtpHash: otpHash,
+          emailVerificationOtpExpiresAt,
+          emailVerificationOtpAttempts: 0,
+          emailVerificationOtpLastSentAt: now,
         },
       });
       userId = user.id;
@@ -190,42 +205,113 @@ export class AuthService {
       throw err;
     }
 
-    const verificationUrl = `${this.config.get<string>('FRONTEND_URL')}/verify-email?token=${verificationToken}`;
-    await this.mail.sendVerificationEmail(email, verificationUrl);
+    await this.mail.sendOtpEmail(email, otp);
 
     return {
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'Registration successful. Please check your email for a verification code.',
       organizationId: organization.id,
       userId,
     };
   }
 
   async verifyEmail(dto: VerifyEmailDto): Promise<{ message: string }> {
-    const tokenHash = hashToken(dto.token);
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
 
-    const user = await this.prisma.user.findFirst({ where: { emailVerificationTokenHash: tokenHash } });
-    if (!user || !user.emailVerificationExpiresAt) {
-      throw new BadRequestException(GENERIC_TOKEN_ERROR);
+    // Same generic error whether the account doesn't exist, is already
+    // verified, or has no OTP pending — never distinguishable to the caller.
+    if (!user || user.emailVerified || !user.emailVerificationOtpHash || !user.emailVerificationOtpExpiresAt) {
+      throw new BadRequestException({ message: GENERIC_OTP_ERROR, code: 'OTP_INVALID' });
     }
 
-    if (user.emailVerificationExpiresAt.getTime() < Date.now()) {
+    if (user.emailVerificationOtpAttempts >= OTP_MAX_ATTEMPTS) {
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { emailVerificationTokenHash: null, emailVerificationExpiresAt: null },
+        data: { emailVerificationOtpHash: null, emailVerificationOtpExpiresAt: null, emailVerificationOtpAttempts: 0 },
       });
-      throw new BadRequestException(GENERIC_TOKEN_ERROR);
+      throw new BadRequestException({
+        message: 'Too many incorrect attempts. Please request a new code.',
+        code: 'OTP_TOO_MANY_ATTEMPTS',
+      });
+    }
+
+    if (user.emailVerificationOtpExpiresAt.getTime() < Date.now()) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerificationOtpHash: null, emailVerificationOtpExpiresAt: null, emailVerificationOtpAttempts: 0 },
+      });
+      throw new BadRequestException({
+        message: 'This verification code has expired. Please request a new one.',
+        code: 'OTP_EXPIRED',
+      });
+    }
+
+    if (!safeCompareHex(hashToken(dto.otp), user.emailVerificationOtpHash)) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerificationOtpAttempts: { increment: 1 } },
+      });
+      throw new BadRequestException({
+        message: 'The verification code you entered is incorrect.',
+        code: 'OTP_INVALID',
+      });
     }
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
         emailVerified: true,
-        emailVerificationTokenHash: null,
-        emailVerificationExpiresAt: null,
+        emailVerificationOtpHash: null,
+        emailVerificationOtpExpiresAt: null,
+        emailVerificationOtpAttempts: 0,
+        emailVerificationOtpLastSentAt: null,
       },
     });
 
     return { message: 'Email verified successfully.' };
+  }
+
+  /**
+   * Anti-enumeration by design (Step 18): always returns the same generic
+   * message regardless of whether the account exists, is already verified,
+   * or is mid-cooldown — the only observable difference is that a
+   * still-cooling-down caller also gets a `retryAfterSeconds` hint back so
+   * the UI can render an accurate countdown without that hint ever
+   * confirming account existence on its own (a non-existent account simply
+   * never has a `retryAfterSeconds` to report).
+   */
+  async resendOtp(dto: ResendOtpDto): Promise<{ message: string; retryAfterSeconds?: number }> {
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user || user.emailVerified) {
+      return { message: GENERIC_RESEND_MESSAGE };
+    }
+
+    if (user.emailVerificationOtpLastSentAt) {
+      const elapsedSeconds = (Date.now() - user.emailVerificationOtpLastSentAt.getTime()) / 1000;
+      if (elapsedSeconds < OTP_RESEND_COOLDOWN_SECONDS) {
+        return {
+          message: GENERIC_RESEND_MESSAGE,
+          retryAfterSeconds: Math.ceil(OTP_RESEND_COOLDOWN_SECONDS - elapsedSeconds),
+        };
+      }
+    }
+
+    const otp = generateOtp();
+    const now = new Date();
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationOtpHash: hashToken(otp),
+        emailVerificationOtpExpiresAt: new Date(now.getTime() + OTP_EXPIRES_IN_MINUTES * 60_000),
+        emailVerificationOtpAttempts: 0,
+        emailVerificationOtpLastSentAt: now,
+      },
+    });
+    await this.mail.sendOtpEmail(email, otp);
+
+    return { message: GENERIC_RESEND_MESSAGE };
   }
 
   async login(dto: LoginDto): Promise<{ tokens: TokenPair; user: PublicUser }> {

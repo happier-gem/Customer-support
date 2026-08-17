@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type FeedbackFormSummary, type Paginated } from "@/lib/api";
 import { cardClass, errorTextClass, statusBadgeClass } from "@/lib/ui";
@@ -47,9 +46,7 @@ export default function SupportFeedbackPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
+          <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
         <h1 className="text-xl font-semibold text-gray-900">Feedback (read-only)</h1>
 
         {error && <p className={errorTextClass}>{error}</p>}
@@ -87,6 +84,5 @@ export default function SupportFeedbackPage() {
           )}
         </div>
       </main>
-    </div>
   );
 }

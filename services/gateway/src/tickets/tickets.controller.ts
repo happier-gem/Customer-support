@@ -35,6 +35,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
+import { TicketsGateway } from '../realtime/tickets.gateway';
 import { TICKET_ATTACHMENTS_DIR, sanitizeDisplayFileName, ticketAttachmentUploadOptions } from './ticket-attachment-upload.config';
 
 /**
@@ -49,12 +50,28 @@ import { TICKET_ATTACHMENTS_DIR, sanitizeDisplayFileName, ticketAttachmentUpload
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(ROLES.CUSTOMER, ROLES.SUPPORT_AGENT, ROLES.TENANT_OWNER)
 export class TicketsController {
-  constructor(private readonly authGateway: AuthGatewayService) {}
+  constructor(
+    private readonly authGateway: AuthGatewayService,
+    private readonly ticketsGateway: TicketsGateway,
+  ) {}
+
+  /**
+   * Broadcasts a live-update event for a ticket to both its organization's
+   * staff room and its customer's private room — purely additive, called
+   * only after the RPC mutation above has already succeeded, so a failed
+   * write never produces a phantom event.
+   */
+  private broadcastTicketEvent(event: 'ticket:created' | 'ticket:updated', ticket: TicketDto): void {
+    this.ticketsGateway.emitToOrg(ticket.organizationId, event, { ticket });
+    this.ticketsGateway.emitToCustomer(ticket.customer.id, event, { ticket });
+  }
 
   @Post()
   @Roles(ROLES.CUSTOMER)
   async create(@Body() dto: CreateTicketDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.authGateway.send<TicketDto>(TICKET_PATTERNS.CREATE, { ...dto, authContext: user });
+    const ticket = await this.authGateway.send<TicketDto>(TICKET_PATTERNS.CREATE, { ...dto, authContext: user });
+    this.broadcastTicketEvent('ticket:created', ticket);
+    return ticket;
   }
 
   @Get()
@@ -84,27 +101,36 @@ export class TicketsController {
     @Body() dto: UpdateTicketStatusDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.authGateway.send<TicketDto>(TICKET_PATTERNS.UPDATE_STATUS, {
+    const ticket = await this.authGateway.send<TicketDto>(TICKET_PATTERNS.UPDATE_STATUS, {
       authContext: user,
       ticketId: id,
       status: dto.status,
     });
+    this.broadcastTicketEvent('ticket:updated', ticket);
+    return ticket;
   }
 
   @Post(':id/assign')
   @Roles(ROLES.TENANT_OWNER)
   async assign(@Param('id') id: string, @Body() dto: AssignTicketDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.authGateway.send<TicketDto>(TICKET_PATTERNS.ASSIGN, {
+    const ticket = await this.authGateway.send<TicketDto>(TICKET_PATTERNS.ASSIGN, {
       authContext: user,
       ticketId: id,
       agentId: dto.agentId,
     });
+    this.broadcastTicketEvent('ticket:updated', ticket);
+    return ticket;
   }
 
   @Post(':id/assign-self')
   @Roles(ROLES.SUPPORT_AGENT)
   async assignSelf(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.authGateway.send<TicketDto>(TICKET_PATTERNS.ASSIGN_SELF, { authContext: user, ticketId: id });
+    const ticket = await this.authGateway.send<TicketDto>(TICKET_PATTERNS.ASSIGN_SELF, {
+      authContext: user,
+      ticketId: id,
+    });
+    this.broadcastTicketEvent('ticket:updated', ticket);
+    return ticket;
   }
 
   @Post(':id/attachments')
@@ -118,7 +144,7 @@ export class TicketsController {
       throw new BadRequestException('No file was provided.');
     }
 
-    return this.authGateway.send<TicketAttachmentDto>(TICKET_PATTERNS.CREATE_ATTACHMENT, {
+    const attachment = await this.authGateway.send<TicketAttachmentDto>(TICKET_PATTERNS.CREATE_ATTACHMENT, {
       authContext: user,
       ticketId: id,
       fileName: sanitizeDisplayFileName(file.originalname),
@@ -126,6 +152,18 @@ export class TicketsController {
       mimeType: file.mimetype,
       size: file.size,
     });
+
+    // TicketAttachmentDto doesn't carry the ticket's organizationId/customer id,
+    // so this routes by the *uploader's* own identity rather than an extra RPC
+    // round-trip: `user.organizationId` always matches the ticket's org (already
+    // enforced server-side before the upload succeeds), and if the uploader is
+    // the customer themselves, their own other sessions get the live update too.
+    this.ticketsGateway.emitToOrg(user.organizationId, 'ticket:attachment-added', { ticketId: id, attachment });
+    if (user.role === ROLES.CUSTOMER) {
+      this.ticketsGateway.emitToCustomer(user.userId, 'ticket:attachment-added', { ticketId: id, attachment });
+    }
+
+    return attachment;
   }
 
   @Get(':id/attachments/:attachmentId/download')

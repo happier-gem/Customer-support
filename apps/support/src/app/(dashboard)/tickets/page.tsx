@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type Paginated, type Ticket, type TicketPriority, type TicketStatus } from "@/lib/api";
+import { useTicketSocket } from "@/lib/use-ticket-socket";
 import {
   buttonClass,
   cardClass,
@@ -21,15 +21,16 @@ import {
 const STATUS_OPTIONS: TicketStatus[] = ["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTOMER", "RESOLVED", "CLOSED"];
 const PRIORITY_OPTIONS: TicketPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
-export default function TicketsDashboardPage() {
+function TicketsDashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, accessToken, status } = useAuth();
 
   const [result, setResult] = useState<Paginated<Ticket> | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "">("");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "">("");
-  const [assigneeFilter, setAssigneeFilter] = useState<"" | "me">("");
+  const [assigneeFilter, setAssigneeFilter] = useState<"" | "me">(searchParams.get("assignee") === "me" ? "me" : "");
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +64,15 @@ export default function TicketsDashboardPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    setAssigneeFilter(searchParams.get("assignee") === "me" ? "me" : "");
+    setPage(1);
+  }, [searchParams]);
+
+  const { connected } = useTicketSocket(accessToken, () => {
+    load();
+  });
+
   if (status === "loading" || !user) {
     return (
       <main className="flex flex-1 items-center justify-center bg-gray-50">
@@ -72,10 +82,17 @@ export default function TicketsDashboardPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-900">Tickets</h1>
+          <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-gray-900">Tickets</h1>
+          <span
+            className="flex items-center gap-1 text-xs text-gray-400"
+            title={connected ? "Live updates connected" : "Live updates unavailable"}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-green-500" : "bg-gray-300"}`} />
+            {connected ? "Live" : "Offline"}
+          </span>
+        </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -141,16 +158,19 @@ export default function TicketsDashboardPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs text-gray-500">
+                  <th className="pb-2 font-medium">ID</th>
                   <th className="pb-2 font-medium">Title</th>
                   <th className="pb-2 font-medium">Customer</th>
                   <th className="pb-2 font-medium">Agent</th>
                   <th className="pb-2 font-medium">Priority</th>
                   <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {result.data.map((ticket) => (
                   <tr key={ticket.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/tickets/${ticket.id}`)}>
+                    <td className="py-2 pr-2 font-mono text-xs text-gray-400">#{ticket.id.slice(0, 8)}</td>
                     <td className="max-w-[240px] truncate py-2 font-medium text-gray-900">
                       <Link href={`/tickets/${ticket.id}`}>{ticket.title}</Link>
                     </td>
@@ -162,6 +182,7 @@ export default function TicketsDashboardPage() {
                     <td className="py-2">
                       <span className={statusBadgeClass(ticket.status)}>{formatStatusLabel(ticket.status)}</span>
                     </td>
+                    <td className="py-2 text-xs text-gray-500">{new Date(ticket.updatedAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -179,7 +200,7 @@ export default function TicketsDashboardPage() {
                 Previous
               </button>
               <button
-                className={`${buttonClass} w-auto px-4`}
+                className={`${buttonClass} w-auto! px-4`}
                 disabled={page >= result.pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -189,6 +210,13 @@ export default function TicketsDashboardPage() {
           </div>
         )}
       </main>
-    </div>
+  );
+}
+
+export default function TicketsDashboardPage() {
+  return (
+    <Suspense fallback={<main className="flex flex-1 items-center justify-center"><p className="text-sm text-gray-500">Loading…</p></main>}>
+      <TicketsDashboardContent />
+    </Suspense>
   );
 }

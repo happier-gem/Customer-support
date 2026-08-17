@@ -66,24 +66,23 @@ describe('AuthService (integration)', () => {
     jest.restoreAllMocks();
   });
 
-  async function registerAndGetVerificationToken(overrides: Partial<typeof baseRegisterDto> = {}) {
-    const sendSpy = jest.spyOn(mail, 'sendVerificationEmail').mockResolvedValue();
+  async function registerAndGetOtp(overrides: Partial<typeof baseRegisterDto> = {}) {
+    const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
     const dto = { ...baseRegisterDto, ...overrides };
     const result = await authService.register(dto);
-    const url = sendSpy.mock.calls[0][1];
-    const token = new URL(url).searchParams.get('token')!;
-    return { result, token, dto };
+    const otp = sendSpy.mock.calls[0][1];
+    return { result, otp, dto };
   }
 
   async function registerVerifyAndLogin(overrides: Partial<typeof baseRegisterDto> = {}) {
-    const { token, dto } = await registerAndGetVerificationToken(overrides);
-    await authService.verifyEmail({ token });
+    const { otp, dto } = await registerAndGetOtp(overrides);
+    await authService.verifyEmail({ email: dto.email, otp });
     return authService.login({ email: dto.email, password: dto.password });
   }
 
   describe('register', () => {
     it('creates an organization and its initial user, transactionally', async () => {
-      const { result } = await registerAndGetVerificationToken();
+      const { result } = await registerAndGetOtp();
 
       expect(result.organizationId).toBeDefined();
       expect(result.userId).toBeDefined();
@@ -97,7 +96,7 @@ describe('AuthService (integration)', () => {
     });
 
     it('hashes the password (never stores plaintext, and argon2 can verify it)', async () => {
-      const { result } = await registerAndGetVerificationToken();
+      const { result } = await registerAndGetOtp();
       const user = await prisma.user.findUnique({ where: { id: result.userId } });
 
       expect(user?.passwordHash).not.toBe(baseRegisterDto.password);
@@ -106,51 +105,151 @@ describe('AuthService (integration)', () => {
     });
 
     it('rejects duplicate email registration with a 409 and does not create a second org/user', async () => {
-      await registerAndGetVerificationToken();
+      await registerAndGetOtp();
 
-      await expect(registerAndGetVerificationToken()).rejects.toThrow(ConflictException);
+      await expect(registerAndGetOtp()).rejects.toThrow(ConflictException);
 
       const users = await prisma.user.findMany({ where: { email: baseRegisterDto.email } });
       const orgs = await prisma.organization.findMany({});
       expect(users).toHaveLength(1);
       expect(orgs).toHaveLength(1);
     });
+
+    it('never stores the OTP in plaintext', async () => {
+      const { result, otp } = await registerAndGetOtp();
+      const user = await prisma.user.findUnique({ where: { id: result.userId } });
+
+      expect(otp).toMatch(/^\d{6}$/);
+      expect(user?.emailVerificationOtpHash).not.toBe(otp);
+      expect(user?.emailVerificationOtpHash).toBe(hashToken(otp));
+    });
   });
 
-  describe('verifyEmail', () => {
-    it('marks the user verified and invalidates the token so it cannot be reused', async () => {
-      const { token, result } = await registerAndGetVerificationToken();
+  describe('verifyEmail (OTP)', () => {
+    it('marks the user verified and invalidates the OTP so it cannot be reused', async () => {
+      const { otp, dto, result } = await registerAndGetOtp();
 
-      await expect(authService.verifyEmail({ token })).resolves.toEqual({
+      await expect(authService.verifyEmail({ email: dto.email, otp })).resolves.toEqual({
         message: 'Email verified successfully.',
       });
 
       const user = await prisma.user.findUnique({ where: { id: result.userId } });
       expect(user?.emailVerified).toBe(true);
-      expect(user?.emailVerificationTokenHash).toBeNull();
+      expect(user?.emailVerificationOtpHash).toBeNull();
 
-      // Reusing the same (now-cleared) token must fail, not silently re-succeed.
-      await expect(authService.verifyEmail({ token })).rejects.toThrow(BadRequestException);
+      // Reusing the same (now-cleared) OTP must fail, not silently re-succeed.
+      await expect(authService.verifyEmail({ email: dto.email, otp })).rejects.toThrow(BadRequestException);
     });
 
-    it('rejects an invalid/unknown token without leaking why', async () => {
-      await expect(authService.verifyEmail({ token: 'not-a-real-token-00000000000000' })).rejects.toThrow(
-        BadRequestException,
-      );
-    });
+    it('rejects an incorrect code with a distinct "invalid code" error and increments the attempt counter', async () => {
+      const { dto, result } = await registerAndGetOtp();
 
-    it('rejects an expired token', async () => {
-      const { token, result } = await registerAndGetVerificationToken();
-
-      await prisma.user.update({
-        where: { id: result.userId },
-        data: { emailVerificationExpiresAt: new Date(Date.now() - 60_000) },
+      await expect(authService.verifyEmail({ email: dto.email, otp: '000000' })).rejects.toMatchObject({
+        response: { code: 'OTP_INVALID' },
       });
-
-      await expect(authService.verifyEmail({ token })).rejects.toThrow(BadRequestException);
 
       const user = await prisma.user.findUnique({ where: { id: result.userId } });
       expect(user?.emailVerified).toBe(false);
+      expect(user?.emailVerificationOtpAttempts).toBe(1);
+    });
+
+    it('rejects an unknown email without leaking whether the account exists', async () => {
+      await expect(authService.verifyEmail({ email: 'nobody@nowhere.test', otp: '123456' })).rejects.toMatchObject({
+        response: { code: 'OTP_INVALID' },
+      });
+    });
+
+    it('rejects an expired code with a distinct "expired" error', async () => {
+      const { otp, dto, result } = await registerAndGetOtp();
+
+      await prisma.user.update({
+        where: { id: result.userId },
+        data: { emailVerificationOtpExpiresAt: new Date(Date.now() - 60_000) },
+      });
+
+      await expect(authService.verifyEmail({ email: dto.email, otp })).rejects.toMatchObject({
+        response: { code: 'OTP_EXPIRED' },
+      });
+
+      const user = await prisma.user.findUnique({ where: { id: result.userId } });
+      expect(user?.emailVerified).toBe(false);
+    });
+
+    it('locks out further attempts after 5 incorrect codes and requires a resend', async () => {
+      const { dto, result } = await registerAndGetOtp();
+
+      for (let i = 0; i < 5; i++) {
+        await expect(authService.verifyEmail({ email: dto.email, otp: '000000' })).rejects.toThrow(
+          BadRequestException,
+        );
+      }
+
+      await expect(authService.verifyEmail({ email: dto.email, otp: '000000' })).rejects.toMatchObject({
+        response: { code: 'OTP_TOO_MANY_ATTEMPTS' },
+      });
+
+      const user = await prisma.user.findUnique({ where: { id: result.userId } });
+      expect(user?.emailVerificationOtpHash).toBeNull();
+      expect(user?.emailVerified).toBe(false);
+    });
+
+    it('rejects a second verification attempt once already verified', async () => {
+      const { otp, dto } = await registerAndGetOtp();
+      await authService.verifyEmail({ email: dto.email, otp });
+
+      await expect(authService.verifyEmail({ email: dto.email, otp })).rejects.toMatchObject({
+        response: { code: 'OTP_INVALID' },
+      });
+    });
+  });
+
+  describe('resendOtp', () => {
+    it('issues a new code and lets it be used to verify', async () => {
+      const { dto } = await registerAndGetOtp();
+      // Simulate the resend cooldown from registration having already elapsed.
+      await prisma.user.update({
+        where: { email: dto.email },
+        data: { emailVerificationOtpLastSentAt: new Date(Date.now() - 61_000) },
+      });
+
+      // jest.spyOn on an already-mocked method returns the same mock instance
+      // (it doesn't re-wrap), so clear prior calls before isolating the resend's.
+      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+      sendSpy.mockClear();
+      const resend = await authService.resendOtp({ email: dto.email });
+      expect(resend.retryAfterSeconds).toBeUndefined();
+
+      const newOtp = sendSpy.mock.calls[0][1];
+      await expect(authService.verifyEmail({ email: dto.email, otp: newOtp })).resolves.toEqual({
+        message: 'Email verified successfully.',
+      });
+    });
+
+    it('enforces a resend cooldown and reports retryAfterSeconds', async () => {
+      const { dto } = await registerAndGetOtp();
+
+      const result = await authService.resendOtp({ email: dto.email });
+      expect(result.retryAfterSeconds).toBeGreaterThan(0);
+      expect(result.retryAfterSeconds).toBeLessThanOrEqual(60);
+    });
+
+    it('returns the same generic message for a non-existent account (no enumeration)', async () => {
+      const { dto } = await registerAndGetOtp();
+
+      const existing = await authService.resendOtp({ email: dto.email });
+      const nonExisting = await authService.resendOtp({ email: 'nobody@nowhere.test' });
+
+      expect(existing.message).toBe(nonExisting.message);
+      expect(nonExisting.retryAfterSeconds).toBeUndefined();
+    });
+
+    it('returns the same generic message for an already-verified account', async () => {
+      const { otp, dto } = await registerAndGetOtp();
+      await authService.verifyEmail({ email: dto.email, otp });
+
+      const result = await authService.resendOtp({ email: dto.email });
+      expect(result.message).toBe('If that account needs verification, a new code has been sent.');
+      expect(result.retryAfterSeconds).toBeUndefined();
     });
   });
 
@@ -188,7 +287,7 @@ describe('AuthService (integration)', () => {
     });
 
     it('rejects incorrect credentials', async () => {
-      await registerAndGetVerificationToken();
+      await registerAndGetOtp();
 
       await expect(
         authService.login({ email: baseRegisterDto.email, password: 'WrongPassword999' }),
@@ -196,7 +295,7 @@ describe('AuthService (integration)', () => {
     });
 
     it('rejects login for an unverified email', async () => {
-      await registerAndGetVerificationToken();
+      await registerAndGetOtp();
 
       await expect(
         authService.login({ email: baseRegisterDto.email, password: baseRegisterDto.password }),
@@ -304,7 +403,7 @@ describe('AuthService (integration)', () => {
 
   describe('forgotPassword / resetPassword', () => {
     it('does not reveal whether the email exists (same generic message either way)', async () => {
-      await registerAndGetVerificationToken();
+      await registerAndGetOtp();
 
       const existing = await authService.forgotPassword({ email: baseRegisterDto.email });
       const nonExisting = await authService.forgotPassword({ email: 'nobody@nowhere.test' });

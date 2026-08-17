@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { AdminNav } from "@/components/admin-nav";
 import { api, ApiError, type AdminOrganization, type Paginated, type PlanType } from "@/lib/api";
 import {
   buttonClass,
@@ -89,9 +88,7 @@ export default function OrganizationsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <AdminNav />
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
+          <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
         <h1 className="text-xl font-semibold text-gray-900">Organizations</h1>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -182,7 +179,7 @@ export default function OrganizationsPage() {
                           <button
                             disabled={actioningId === org.id}
                             onClick={() => handleToggleSuspend(org)}
-                            className={org.isSuspended ? `${buttonClass} w-auto px-3 py-1` : `${dangerButtonClass} w-auto`}
+                            className={org.isSuspended ? `${buttonClass} w-auto! px-3 py-1` : `${dangerButtonClass} w-auto`}
                           >
                             {actioningId === org.id ? "…" : org.isSuspended ? "Activate" : "Suspend"}
                           </button>
@@ -206,7 +203,7 @@ export default function OrganizationsPage() {
                 Previous
               </button>
               <button
-                className={`${buttonClass} w-auto px-4`}
+                className={`${buttonClass} w-auto! px-4`}
                 disabled={page >= result.pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -216,6 +213,5 @@ export default function OrganizationsPage() {
           </div>
         )}
       </main>
-    </div>
   );
 }

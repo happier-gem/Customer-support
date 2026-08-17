@@ -3,7 +3,6 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { api, ApiError, API_BASE, type Organization } from "@/lib/api";
 import {
   buttonClass,
@@ -111,12 +110,9 @@ export default function OrganizationSettingsPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="flex flex-1 flex-col bg-gray-50">
-        <DashboardNav />
-        <main className="flex flex-1 items-center justify-center">
+              <main className="flex flex-1 items-center justify-center">
           <p className="text-sm text-gray-500">Loading…</p>
         </main>
-      </div>
     );
   }
 
@@ -125,9 +121,7 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
+          <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
         <h1 className="text-xl font-semibold text-gray-900">Organization settings</h1>
 
         <section className={`${cardClass} space-y-4`}>
@@ -192,6 +186,5 @@ export default function OrganizationSettingsPage() {
           </button>
         </form>
       </main>
-    </div>
   );
 }

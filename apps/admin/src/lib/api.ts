@@ -94,6 +94,38 @@ export interface PlatformStats {
   usage: { ticketsThisMonth: number; feedbackForms: number; activeTeamMembers: number };
 }
 
+export type NotificationType =
+  | "TICKET_CREATED"
+  | "TICKET_ASSIGNED"
+  | "TICKET_STATUS_CHANGED"
+  | "TICKET_RESOLVED"
+  | "TICKET_CLOSED"
+  | "TEAM_INVITATION_ACCEPTED"
+  | "TEAM_MEMBER_ROLE_CHANGED"
+  | "TEAM_MEMBER_REMOVED"
+  | "FEEDBACK_SUBMITTED"
+  | "PLAN_LIMIT_REACHED";
+
+export interface Notification {
+  id: string;
+  organizationId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  readAt: string | null;
+  ticketId: string | null;
+  invitationId: string | null;
+  feedbackFormId: string | null;
+  createdAt: string;
+}
+
+export interface NotificationListParams {
+  page?: number;
+  limit?: number;
+  unreadOnly?: boolean;
+}
+
 function buildQuery(params: object): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params as Record<string, string | number | undefined>)) {
@@ -144,4 +176,19 @@ export const api = {
     }),
 
   listPlans: (accessToken: string) => request<SubscriptionPlan[]>("/admin/plans", { headers: authHeader(accessToken) }),
+
+  listNotifications: (accessToken: string, params: NotificationListParams = {}) =>
+    request<Paginated<Notification>>(`/notifications${buildQuery(params)}`, { headers: authHeader(accessToken) }),
+
+  getUnreadNotificationCount: (accessToken: string) =>
+    request<{ count: number }>("/notifications/unread-count", { headers: authHeader(accessToken) }),
+
+  markNotificationRead: (accessToken: string, id: string) =>
+    request<Notification>(`/notifications/${encodeURIComponent(id)}/read`, {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+    }),
+
+  markAllNotificationsRead: (accessToken: string) =>
+    request<{ count: number }>("/notifications/read-all", { method: "PATCH", headers: authHeader(accessToken) }),
 };

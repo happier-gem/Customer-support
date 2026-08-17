@@ -3,7 +3,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DashboardNav } from "@/components/dashboard-nav";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type FeedbackCategory } from "@/lib/api";
 import { buttonClass, cardClass, errorTextClass, inputClass, labelClass, linkClass, selectClass } from "@/lib/ui";
@@ -55,9 +54,7 @@ export default function NewFeedbackFormPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-50">
-      <DashboardNav />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+          <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
         <h1 className="mb-4 text-xl font-semibold text-gray-900">New Feedback Form</h1>
         <form onSubmit={handleSubmit} className={`${cardClass} space-y-4`}>
           <div>
@@ -124,6 +121,5 @@ export default function NewFeedbackFormPage() {
           </p>
         </form>
       </main>
-    </div>
   );
 }

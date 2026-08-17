@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
   AUTH_PATTERNS,
@@ -17,6 +18,7 @@ import {
   RegisterCustomerDto,
   LoginDto,
   VerifyEmailDto,
+  ResendOtpDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   RefreshTokenDto,
@@ -66,8 +68,16 @@ export class AuthController {
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authGateway.send(AUTH_PATTERNS.VERIFY_EMAIL, dto);
+  }
+
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  async resendOtp(@Body() dto: ResendOtpDto) {
+    return this.authGateway.send(AUTH_PATTERNS.RESEND_OTP, dto);
   }
 
   @Post('login')

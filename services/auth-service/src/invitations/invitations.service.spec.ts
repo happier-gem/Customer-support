@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { ROLES, RpcAuthContext } from '@app/shared';
 import { InvitationsService } from './invitations.service';
@@ -150,12 +150,98 @@ describe('InvitationsService (integration — RBAC + tenant isolation)', () => {
       expect(firstRow?.status).toBe('REVOKED');
       expect(second.status).toBe('PENDING');
     });
+
+    it('returns a usable inviteUrl (never returned again from list())', async () => {
+      const created = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+      expect(created.inviteUrl).toContain('/invite/accept?token=');
+
+      const listed = await service.list(ownerA);
+      const listedEntry = listed.find((i) => i.id === created.id) as unknown as { inviteUrl?: string };
+      expect(listedEntry?.inviteUrl).toBeUndefined();
+    });
   });
 
   describe('list', () => {
     it('rejects non-owners', async () => {
       await expect(service.list(agentA)).rejects.toThrow(ForbiddenException);
       await expect(service.list(customerA)).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('revoke', () => {
+    it('lets a tenant owner revoke their own pending invitation', async () => {
+      const invitation = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+
+      const revoked = await service.revoke(ownerA, invitation.id);
+      expect(revoked.status).toBe('REVOKED');
+
+      const row = await prisma.invitation.findUnique({ where: { id: invitation.id } });
+      expect(row?.status).toBe('REVOKED');
+    });
+
+    it('rejects a non-owner', async () => {
+      const invitation = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+      await expect(service.revoke(agentA, invitation.id)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects revoking an invitation belonging to another organization (404, not 403)', async () => {
+      const invitation = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+      await expect(service.revoke(ownerB, invitation.id)).rejects.toThrow(NotFoundException);
+
+      // Confirm it's genuinely untouched, not silently revoked.
+      const row = await prisma.invitation.findUnique({ where: { id: invitation.id } });
+      expect(row?.status).toBe('PENDING');
+    });
+
+    it('rejects revoking an invitation that is no longer pending', async () => {
+      const invitation = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+      await service.revoke(ownerA, invitation.id);
+
+      await expect(service.revoke(ownerA, invitation.id)).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects an unknown invitation id', async () => {
+      await expect(service.revoke(ownerA, '00000000-0000-0000-0000-000000000000')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('resend', () => {
+    it('issues a new link for the same email/role and invalidates the old one', async () => {
+      const original = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+
+      const resent = await service.resend(ownerA, original.id);
+      expect(resent.email).toBe('new-hire@company-a.test');
+      expect(resent.role).toBe(ROLES.SUPPORT_AGENT);
+      expect(resent.status).toBe('PENDING');
+      expect(resent.inviteUrl).not.toBe(original.inviteUrl);
+
+      // The original invitation row is superseded (same supersede logic as create()).
+      const originalRow = await prisma.invitation.findUnique({ where: { id: original.id } });
+      expect(originalRow?.status).toBe('REVOKED');
+
+      const originalToken = new URL(original.inviteUrl).searchParams.get('token')!;
+      const newToken = new URL(resent.inviteUrl).searchParams.get('token')!;
+      await expect(service.validate(originalToken)).rejects.toThrow(BadRequestException);
+      await expect(service.validate(newToken)).resolves.toMatchObject({ email: 'new-hire@company-a.test' });
+    });
+
+    it('rejects a non-owner', async () => {
+      const invitation = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+      await expect(service.resend(agentA, invitation.id)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects resending an invitation belonging to another organization', async () => {
+      const invitation = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+      await expect(service.resend(ownerB, invitation.id)).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects resending an invitation that is no longer pending', async () => {
+      const invitation = await service.create(ownerA, 'new-hire@company-a.test', ROLES.SUPPORT_AGENT);
+      await service.revoke(ownerA, invitation.id);
+
+      await expect(service.resend(ownerA, invitation.id)).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -1,8 +1,13 @@
-import { randomBytes, createHash, timingSafeEqual } from 'crypto';
+import { randomBytes, randomInt, createHash, timingSafeEqual } from 'crypto';
 
-/** Generates a high-entropy, URL-safe token to email to the user (verification / password reset). */
+/** Generates a high-entropy, URL-safe token to email to the user (invitation / password reset links). */
 export function generateSecureToken(): string {
   return randomBytes(32).toString('hex');
+}
+
+/** Generates a cryptographically random 6-digit numeric OTP (registration email verification). */
+export function generateOtp(): string {
+  return randomInt(0, 1_000_000).toString().padStart(6, '0');
 }
 
 /**
