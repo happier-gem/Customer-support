@@ -81,4 +81,9 @@ export class TicketsController {
   getAttachment(@Payload() data: { authContext: RpcAuthContext; ticketId: string; attachmentId: string }) {
     return this.ticketsService.getAttachment(data.authContext, data.ticketId, data.attachmentId);
   }
+
+  @MessagePattern(TICKET_PATTERNS.CREATE_MESSAGE)
+  createMessage(@Payload() data: { authContext: RpcAuthContext; ticketId: string; body: string }) {
+    return this.ticketsService.createMessage(data.authContext, data.ticketId, data.body);
+  }
 }

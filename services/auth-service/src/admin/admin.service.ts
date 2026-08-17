@@ -8,6 +8,7 @@ import {
   ORGANIZATION_STATUSES,
   PaginatedResult,
   PLAN_TYPES,
+  PlanLimits,
   PlanType,
   PlatformStatsDto,
   ROLES,
@@ -120,10 +121,24 @@ export class AdminService {
     return this.toDto(updated);
   }
 
-  /** Reuses SubscriptionsService's own static plan catalog — Phase 6's plans are fixed business constants, so there is nothing here to duplicate or re-derive. */
-  listPlans(authContext: RpcAuthContext): SubscriptionPlanDto[] {
+  /** Reuses SubscriptionsService's own plan catalog so admin and every tenant-facing read agree. */
+  async listPlans(authContext: RpcAuthContext): Promise<SubscriptionPlanDto[]> {
     this.assertPlatformAdmin(authContext);
     return this.subscriptions.listPlans();
+  }
+
+  /**
+   * Phase 10: lets a platform admin edit the FREE/STARTER/PRO limits that
+   * gate team members, monthly tickets, and feedback forms. Validation of
+   * the shape (positive integers or null) happens at the DTO layer; this
+   * only re-asserts the role and rejects an unknown plan key.
+   */
+  async updatePlanLimits(authContext: RpcAuthContext, plan: PlanType, limits: PlanLimits): Promise<SubscriptionPlanDto> {
+    this.assertPlatformAdmin(authContext);
+    if (!(Object.values(PLAN_TYPES) as string[]).includes(plan)) {
+      throw new NotFoundException('Unknown plan.');
+    }
+    return this.subscriptions.updatePlanLimits(plan, limits);
   }
 
   async getPlatformStats(authContext: RpcAuthContext): Promise<PlatformStatsDto> {

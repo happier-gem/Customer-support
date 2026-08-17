@@ -18,12 +18,14 @@ import type { Response } from 'express';
 import {
   AssignTicketDto,
   CreateTicketDto,
+  CreateTicketMessageDto,
   ROLES,
   TICKET_PATTERNS,
   TicketAttachmentDto,
   TicketDetailDto,
   TicketDto,
   TicketHistoryDto,
+  TicketMessageDto,
   TicketQueryDto,
   UpdateTicketDto,
   UpdateTicketStatusDto,
@@ -184,5 +186,27 @@ export class TicketsController {
     const filePath = join(TICKET_ATTACHMENTS_DIR, attachment.storedFileName);
     res.setHeader('Content-Type', attachment.mimeType);
     res.download(filePath, attachment.fileName);
+  }
+
+  @Post(':id/messages')
+  async createMessage(
+    @Param('id') id: string,
+    @Body() dto: CreateTicketMessageDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const result = await this.authGateway.send<{ message: TicketMessageDto; customerId: string }>(
+      TICKET_PATTERNS.CREATE_MESSAGE,
+      { authContext: user, ticketId: id, body: dto.body },
+    );
+
+    // Unlike attachments, TicketsService.createMessage hands back the
+    // ticket's customerId alongside the message specifically so a staff
+    // reply can be routed straight to that customer's room — the whole
+    // point of a reply thread is the other side seeing it live, so this
+    // doesn't settle for the identity-based routing shortcut used elsewhere.
+    this.ticketsGateway.emitToOrg(user.organizationId, 'ticket:message-added', { ticketId: id, message: result.message });
+    this.ticketsGateway.emitToCustomer(result.customerId, 'ticket:message-added', { ticketId: id, message: result.message });
+
+    return result.message;
   }
 }

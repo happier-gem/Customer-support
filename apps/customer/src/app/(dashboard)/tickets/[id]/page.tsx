@@ -36,6 +36,8 @@ function historyLine(entry: TicketDetail["history"][number]): string {
       return `${entry.actor.name} updated ${((entry.metadata?.fields as string[]) ?? []).join(", ") || "the ticket"}`;
     case "ATTACHMENT_ADDED":
       return `${entry.actor.name} attached ${(entry.metadata?.fileName as string) ?? "a file"}`;
+    case "MESSAGE_ADDED":
+      return `${entry.actor.name} replied`;
     default:
       return `${entry.actor.name} performed ${entry.action}`;
   }
@@ -53,6 +55,10 @@ export default function TicketDetailPage() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [replyBody, setReplyBody] = useState("");
+  const [replyError, setReplyError] = useState<string | null>(null);
+  const [sendingReply, setSendingReply] = useState(false);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -96,6 +102,22 @@ export default function TicketDetailPage() {
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleSendReply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accessToken || !replyBody.trim()) return;
+    setReplyError(null);
+    setSendingReply(true);
+    try {
+      await api.createTicketMessage(accessToken, params.id, replyBody.trim());
+      setReplyBody("");
+      await load();
+    } catch (err) {
+      setReplyError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setSendingReply(false);
     }
   }
 
@@ -210,6 +232,49 @@ export default function TicketDetailPage() {
             {uploadError && <p className={`${errorTextClass} mt-2`}>{uploadError}</p>}
             {uploadSuccess && !uploadError && <p className={`${successTextClass} mt-2`}>Attachment uploaded.</p>}
           </div>
+        </div>
+
+        <div className={`${cardClass} space-y-3`}>
+          <h2 className="text-sm font-semibold text-gray-900">Conversation</h2>
+          {ticket.messages.length === 0 ? (
+            <p className="text-sm text-gray-500">No replies yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {ticket.messages.map((m) => {
+                const isMine = m.author.id === user.id;
+                return (
+                  <li key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isMine ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
+                      {!isMine && <p className="text-xs font-medium text-gray-500">{m.author.name}</p>}
+                      <p className="whitespace-pre-wrap text-sm">{m.body}</p>
+                      <p className={`mt-1 text-xs ${isMine ? "text-gray-300" : "text-gray-400"}`}>
+                        {new Date(m.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {ticket.status === "CLOSED" ? (
+            <p className="text-sm text-gray-500">This ticket is closed and can no longer receive replies.</p>
+          ) : (
+            <form onSubmit={handleSendReply} className="space-y-2">
+              <textarea
+                rows={3}
+                maxLength={5000}
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+                placeholder="Write a reply…"
+                className={inputClass}
+              />
+              {replyError && <p className={errorTextClass}>{replyError}</p>}
+              <button type="submit" disabled={sendingReply || !replyBody.trim()} className={`${buttonClass} w-auto! px-4`}>
+                {sendingReply ? "Sending…" : "Send reply"}
+              </button>
+            </form>
+          )}
         </div>
 
         <div className={`${cardClass} space-y-3`}>

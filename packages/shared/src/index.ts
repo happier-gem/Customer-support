@@ -27,6 +27,8 @@ export * from './dto/feedback-response-query.dto';
 export * from './dto/change-plan.dto';
 export * from './dto/notification-query.dto';
 export * from './dto/admin-organization-query.dto';
+export * from './dto/update-plan-limits.dto';
+export * from './dto/create-ticket-message.dto';
 export * from './constants/message-patterns';
 export * from './constants/roles';
 export * from './constants/ticket';

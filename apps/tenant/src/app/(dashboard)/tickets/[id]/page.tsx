@@ -36,6 +36,8 @@ function historyLine(entry: TicketDetail["history"][number]): string {
       return `${entry.actor.name} updated ${((entry.metadata?.fields as string[]) ?? []).join(", ") || "the ticket"}`;
     case "ATTACHMENT_ADDED":
       return `${entry.actor.name} attached ${(entry.metadata?.fileName as string) ?? "a file"}`;
+    case "MESSAGE_ADDED":
+      return `${entry.actor.name} replied`;
     default:
       return `${entry.actor.name} performed ${entry.action}`;
   }
@@ -56,6 +58,7 @@ export default function TenantTicketDetailPage() {
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [nextStatus, setNextStatus] = useState<TicketStatus | "">("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [replyBody, setReplyBody] = useState("");
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -103,6 +106,14 @@ export default function TenantTicketDetailPage() {
     if (!file || !accessToken) return;
     await runAction(() => api.uploadTicketAttachment(accessToken, params.id, file), "Attachment uploaded.");
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleSendReply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accessToken || !replyBody.trim()) return;
+    const body = replyBody.trim();
+    await runAction(() => api.createTicketMessage(accessToken, params.id, body), "Reply sent.");
+    setReplyBody("");
   }
 
   async function handleDownload(attachmentId: string, fileName: string) {
@@ -248,6 +259,45 @@ export default function TenantTicketDetailPage() {
             </label>
             <input id="attachment" ref={fileInputRef} type="file" disabled={busy} onChange={handleUpload} className={inputClass} />
           </div>
+        </div>
+
+        <div className={`${cardClass} space-y-3`}>
+          <h2 className="text-sm font-semibold text-gray-900">Conversation</h2>
+          {ticket.messages.length === 0 ? (
+            <p className="text-sm text-gray-500">No replies yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {ticket.messages.map((m) => {
+                const isMine = m.author.id === user.id;
+                return (
+                  <li key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isMine ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
+                      {!isMine && <p className="text-xs font-medium text-gray-500">{m.author.name}</p>}
+                      <p className="whitespace-pre-wrap text-sm">{m.body}</p>
+                      <p className={`mt-1 text-xs ${isMine ? "text-gray-300" : "text-gray-400"}`}>
+                        {new Date(m.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <form onSubmit={handleSendReply} className="space-y-2">
+            <textarea
+              rows={3}
+              maxLength={5000}
+              disabled={busy}
+              value={replyBody}
+              onChange={(e) => setReplyBody(e.target.value)}
+              placeholder="Write a reply…"
+              className={inputClass}
+            />
+            <button type="submit" disabled={busy || !replyBody.trim()} className={`${buttonClass} w-auto! px-4`}>
+              {busy ? "Sending…" : "Send reply"}
+            </button>
+          </form>
         </div>
 
         <div className={`${cardClass} space-y-3`}>

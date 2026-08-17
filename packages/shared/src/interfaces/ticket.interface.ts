@@ -42,9 +42,18 @@ export interface TicketHistoryDto {
   createdAt: string;
 }
 
+export interface TicketMessageDto {
+  id: string;
+  ticketId: string;
+  author: TicketPersonSummary;
+  body: string;
+  createdAt: string;
+}
+
 export interface TicketDetailDto extends TicketDto {
   attachments: TicketAttachmentDto[];
   history: TicketHistoryDto[];
+  messages: TicketMessageDto[];
 }
 
 export interface PaginationMeta {

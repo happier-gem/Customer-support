@@ -112,8 +112,8 @@ describe('SubscriptionsService (integration — plan limits + tenant isolation)'
   // Plans
   // ---------------------------------------------------------------------
   describe('plans', () => {
-    it('1-4. FREE, STARTER, PRO all exist with limits that exactly match the assignment', () => {
-      const plans = subscriptions.listPlans();
+    it('1-4. FREE, STARTER, PRO all exist with limits that exactly match the assignment', async () => {
+      const plans = await subscriptions.listPlans();
       expect(plans).toEqual(
         expect.arrayContaining([
           { plan: 'FREE', limits: { teamMembers: 2, monthlyTickets: 50, feedbackForms: 0 } },
@@ -132,6 +132,28 @@ describe('SubscriptionsService (integration — plan limits + tenant isolation)'
     it('5. a newly created organization defaults to the FREE plan', async () => {
       const org = await prisma.organization.create({ data: { name: 'Fresh Co' } });
       expect(org.plan).toBe('FREE');
+    });
+  });
+
+  describe('updatePlanLimits (Phase 10)', () => {
+    afterEach(async () => {
+      // Global row, not reset by the org-scoped beforeEach — restore it so
+      // this doesn't leak into other tests/spec files sharing the DB.
+      await prisma.planLimit.update({
+        where: { plan: 'STARTER' },
+        data: { teamMembers: 10, monthlyTickets: 500, feedbackForms: 5 },
+      });
+    });
+
+    it('persists new limits and getSubscription/listPlans reflect them immediately', async () => {
+      await subscriptions.updatePlanLimits('STARTER', { teamMembers: 42, monthlyTickets: 500, feedbackForms: 5 });
+
+      const plans = await subscriptions.listPlans();
+      expect(plans.find((p) => p.plan === 'STARTER')?.limits.teamMembers).toBe(42);
+
+      await setPlan(orgA.id, 'STARTER');
+      const sub = await subscriptions.getSubscription(ownerA);
+      expect(sub.limits.teamMembers).toBe(42);
     });
   });
 

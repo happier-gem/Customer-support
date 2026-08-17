@@ -51,6 +51,7 @@ export const TICKET_PATTERNS = {
   HISTORY: 'tickets.history',
   CREATE_ATTACHMENT: 'tickets.attachments.create',
   GET_ATTACHMENT: 'tickets.attachments.get',
+  CREATE_MESSAGE: 'tickets.messages.create',
 } as const;
 
 /** TCP message patterns for the Phase 5 feedback system, served by the auth-service. */
@@ -97,4 +98,5 @@ export const ADMIN_PATTERNS = {
   SET_ORGANIZATION_SUSPENDED: 'admin.organizations.set-suspended',
   PLATFORM_STATS: 'admin.stats',
   LIST_PLANS: 'admin.plans.list',
+  UPDATE_PLAN_LIMITS: 'admin.plans.update-limits',
 } as const;

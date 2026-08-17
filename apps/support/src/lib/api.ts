@@ -105,9 +105,18 @@ export interface TicketHistoryEntry {
   createdAt: string;
 }
 
+export interface TicketMessage {
+  id: string;
+  ticketId: string;
+  author: TicketPerson;
+  body: string;
+  createdAt: string;
+}
+
 export interface TicketDetail extends Ticket {
   attachments: TicketAttachment[];
   history: TicketHistoryEntry[];
+  messages: TicketMessage[];
 }
 
 export interface Paginated<T> {
@@ -245,6 +254,13 @@ export const api = {
 
   getTicket: (accessToken: string, id: string) =>
     request<TicketDetail>(`/tickets/${encodeURIComponent(id)}`, { headers: authHeader(accessToken) }),
+
+  createTicketMessage: (accessToken: string, ticketId: string, body: string) =>
+    request<TicketMessage>(`/tickets/${encodeURIComponent(ticketId)}/messages`, {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ body }),
+    }),
 
   updateStatus: (accessToken: string, id: string, statusValue: TicketStatus) =>
     request<Ticket>(`/tickets/${encodeURIComponent(id)}/status`, {

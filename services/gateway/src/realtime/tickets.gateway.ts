@@ -5,7 +5,7 @@ import { OnGatewayConnection, WebSocketGateway, WebSocketServer } from '@nestjs/
 import type { Server, Socket } from 'socket.io';
 import { JwtAccessPayload, ROLES } from '@app/shared';
 
-export type TicketSocketEvent = 'ticket:created' | 'ticket:updated' | 'ticket:attachment-added';
+export type TicketSocketEvent = 'ticket:created' | 'ticket:updated' | 'ticket:attachment-added' | 'ticket:message-added';
 
 /**
  * Phase 10 real-time layer. Business logic stays entirely in auth-service —

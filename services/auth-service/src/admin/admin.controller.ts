@@ -1,6 +1,6 @@
 import { Controller, UseFilters } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { ADMIN_PATTERNS, RpcAuthContext } from '@app/shared';
+import { ADMIN_PATTERNS, PlanLimits, PlanType, RpcAuthContext } from '@app/shared';
 import { AdminService, AdminOrganizationListQuery } from './admin.service';
 import { RpcExceptionFilter } from '../common/filters/rpc-exception.filter';
 
@@ -33,5 +33,10 @@ export class AdminController {
   @MessagePattern(ADMIN_PATTERNS.LIST_PLANS)
   listPlans(@Payload() data: { authContext: RpcAuthContext }) {
     return this.admin.listPlans(data.authContext);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.UPDATE_PLAN_LIMITS)
+  updatePlanLimits(@Payload() data: { authContext: RpcAuthContext; plan: PlanType; limits: PlanLimits }) {
+    return this.admin.updatePlanLimits(data.authContext, data.plan, data.limits);
   }
 }

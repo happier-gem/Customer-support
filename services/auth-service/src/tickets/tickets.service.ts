@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Ticket, TicketAttachment, TicketHistory, User } from '@prisma/client';
+import { Prisma, Ticket, TicketAttachment, TicketHistory, TicketMessage, User } from '@prisma/client';
 import {
   DEFAULT_TICKET_PRIORITY,
   NOTIFICATION_TYPES,
@@ -14,6 +14,7 @@ import {
   TicketDetailDto,
   TicketDto,
   TicketHistoryDto,
+  TicketMessageDto,
   TicketPriority,
   TicketStatus,
   isValidTicketStatusTransition,
@@ -29,6 +30,7 @@ type TicketWithParties = Ticket & {
 
 type TicketAttachmentWithUploader = TicketAttachment & { uploadedBy: Pick<User, 'id' | 'name' | 'email'> };
 type TicketHistoryWithActor = TicketHistory & { actor: Pick<User, 'id' | 'name' | 'email'> };
+type TicketMessageWithAuthor = TicketMessage & { author: Pick<User, 'id' | 'name' | 'email'> };
 
 const PARTY_SELECT = { id: true, name: true, email: true } as const;
 
@@ -58,6 +60,16 @@ function toAttachmentDto(attachment: TicketAttachmentWithUploader): TicketAttach
     size: attachment.size,
     uploadedBy: attachment.uploadedBy,
     createdAt: attachment.createdAt.toISOString(),
+  };
+}
+
+function toMessageDto(message: TicketMessageWithAuthor): TicketMessageDto {
+  return {
+    id: message.id,
+    ticketId: message.ticketId,
+    author: message.author,
+    body: message.body,
+    createdAt: message.createdAt.toISOString(),
   };
 }
 
@@ -235,7 +247,7 @@ export class TicketsService {
   async getById(authContext: RpcAuthContext, ticketId: string): Promise<TicketDetailDto> {
     const ticket = await this.getAccessibleTicket(authContext, ticketId);
 
-    const [attachments, history] = await this.prisma.$transaction([
+    const [attachments, history, messages] = await this.prisma.$transaction([
       this.prisma.ticketAttachment.findMany({
         where: { ticketId: ticket.id },
         include: { uploadedBy: { select: PARTY_SELECT } },
@@ -246,12 +258,18 @@ export class TicketsService {
         include: { actor: { select: PARTY_SELECT } },
         orderBy: { createdAt: 'asc' },
       }),
+      this.prisma.ticketMessage.findMany({
+        where: { ticketId: ticket.id },
+        include: { author: { select: PARTY_SELECT } },
+        orderBy: { createdAt: 'asc' },
+      }),
     ]);
 
     return {
       ...toDto(ticket),
       attachments: attachments.map(toAttachmentDto),
       history: history.map(toHistoryDto),
+      messages: messages.map(toMessageDto),
     };
   }
 
@@ -525,5 +543,91 @@ export class TicketsService {
     }
 
     return { fileName: attachment.fileName, storedFileName: attachment.storedFileName, mimeType: attachment.mimeType };
+  }
+
+  /**
+   * Free-text reply on a ticket's conversation thread — anyone with access to
+   * the ticket can post (its customer, or staff in the org), except a
+   * customer can't post to a CLOSED ticket (terminal state; staff can still
+   * add a closing note). Writes a lightweight MESSAGE_ADDED history entry for
+   * the same unified-audit-trail reason ATTACHMENT_ADDED does.
+   *
+   * Returns `customerId` alongside the message — unlike TicketDto, a bare
+   * TicketMessageDto has nowhere to carry the ticket's customer id, and the
+   * gateway needs it to route the live-update socket event to that specific
+   * customer (not just the org-wide staff room) when staff is the author.
+   */
+  async createMessage(
+    authContext: RpcAuthContext,
+    ticketId: string,
+    body: string,
+  ): Promise<{ message: TicketMessageDto; customerId: string }> {
+    const ticket = await this.getAccessibleTicket(authContext, ticketId);
+
+    if (authContext.role === ROLES.CUSTOMER && ticket.status === TICKET_STATUSES.CLOSED) {
+      throw new ForbiddenException('This ticket is closed and can no longer receive replies.');
+    }
+
+    const trimmed = body.trim();
+
+    const message = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.ticketMessage.create({
+        data: {
+          ticketId: ticket.id,
+          organizationId: ticket.organizationId,
+          authorId: authContext.userId,
+          body: trimmed,
+        },
+        include: { author: { select: PARTY_SELECT } },
+      });
+
+      await tx.ticketHistory.create({
+        data: {
+          ticketId: ticket.id,
+          organizationId: ticket.organizationId,
+          actorId: authContext.userId,
+          action: TICKET_HISTORY_ACTIONS.MESSAGE_ADDED,
+        },
+      });
+
+      // The customer replying notifies staff; staff replying notifies the
+      // customer — never notify the author of their own message.
+      if (authContext.role === ROLES.CUSTOMER) {
+        const recipientIds = ticket.assignedAgentId
+          ? [ticket.assignedAgentId]
+          : (
+              await tx.user.findMany({
+                where: {
+                  organizationId: ticket.organizationId,
+                  role: { in: [ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT] },
+                  isActive: true,
+                },
+                select: { id: true },
+              })
+            ).map((u) => u.id);
+
+        await this.notifications.notify(tx, {
+          organizationId: ticket.organizationId,
+          recipientIds,
+          type: NOTIFICATION_TYPES.TICKET_MESSAGE_ADDED,
+          title: 'New reply on a ticket',
+          message: `${created.author.name} replied on "${ticket.title}".`,
+          ticketId: ticket.id,
+        });
+      } else if (ticket.customerId !== authContext.userId) {
+        await this.notifications.notify(tx, {
+          organizationId: ticket.organizationId,
+          recipientIds: [ticket.customerId],
+          type: NOTIFICATION_TYPES.TICKET_MESSAGE_ADDED,
+          title: 'New reply on your ticket',
+          message: `${created.author.name} replied on "${ticket.title}".`,
+          ticketId: ticket.id,
+        });
+      }
+
+      return created;
+    });
+
+    return { message: toMessageDto(message), customerId: ticket.customerId };
   }
 }

@@ -5,6 +5,7 @@ import * as argon2 from 'argon2';
 import { ASSIGNABLE_TEAM_ROLES, ORGANIZATION_STATUSES, ROLES, RpcAuthContext } from '@app/shared';
 import { AdminService } from './admin.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { PlanLimitExceededException } from '../subscriptions/plan-limit.exception';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -18,6 +19,7 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 describe('AdminService (integration — platform-admin authorization + cross-tenant visibility)', () => {
   let service: AdminService;
+  let subscriptions: SubscriptionsService;
   let prisma: PrismaService;
 
   let orgA: { id: string; name: string };
@@ -36,6 +38,7 @@ describe('AdminService (integration — platform-admin authorization + cross-ten
     }).compile();
 
     service = moduleRef.get(AdminService);
+    subscriptions = moduleRef.get(SubscriptionsService);
     prisma = moduleRef.get(PrismaService);
     await prisma.$connect();
   });
@@ -129,8 +132,8 @@ describe('AdminService (integration — platform-admin authorization + cross-ten
       await expect(service.getPlatformStats(ownerA)).rejects.toThrow(ForbiddenException);
       await expect(service.getPlatformStats(platformAdmin)).resolves.toBeDefined();
 
-      expect(() => service.listPlans(ownerA)).toThrow(ForbiddenException);
-      expect(() => service.listPlans(platformAdmin)).not.toThrow();
+      await expect(service.listPlans(ownerA)).rejects.toThrow(ForbiddenException);
+      await expect(service.listPlans(platformAdmin)).resolves.toBeDefined();
     });
 
     it('a tenant owner cannot escalate by claiming a spoofed organizationId in their own authContext', async () => {
@@ -248,11 +251,65 @@ describe('AdminService (integration — platform-admin authorization + cross-ten
   // Plan visibility (Step 7, Step 27)
   // ---------------------------------------------------------------------
   describe('plan visibility', () => {
-    it('returns the fixed FREE/STARTER/PRO catalog with limits, not a database-editable table', () => {
-      const plans = service.listPlans(platformAdmin);
+    it('returns the FREE/STARTER/PRO catalog with their current (DB-backed) limits', async () => {
+      const plans = await service.listPlans(platformAdmin);
       const planNames = plans.map((p) => p.plan);
       expect(planNames).toEqual(['FREE', 'STARTER', 'PRO']);
       expect(plans.find((p) => p.plan === 'FREE')?.limits).toEqual({ teamMembers: 2, monthlyTickets: 50, feedbackForms: 0 });
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Plan limit editing (Phase 10)
+  // ---------------------------------------------------------------------
+  describe('updatePlanLimits', () => {
+    afterEach(async () => {
+      // These rows are global (not org-scoped, never touched by the
+      // organization.deleteMany() reset elsewhere), so any test that
+      // mutates them must restore the defaults or it leaks into every
+      // other spec file sharing this test database.
+      await prisma.planLimit.update({
+        where: { plan: 'STARTER' },
+        data: { teamMembers: 10, monthlyTickets: 500, feedbackForms: 5 },
+      });
+    });
+
+    it('lets a platform admin change a plan limit, reflected immediately in listPlans()', async () => {
+      const updated = await service.updatePlanLimits(platformAdmin, 'STARTER', {
+        teamMembers: 25,
+        monthlyTickets: 500,
+        feedbackForms: 5,
+      });
+      expect(updated.limits.teamMembers).toBe(25);
+
+      const plans = await service.listPlans(platformAdmin);
+      expect(plans.find((p) => p.plan === 'STARTER')?.limits.teamMembers).toBe(25);
+    });
+
+    it('accepts null to mean unlimited', async () => {
+      const updated = await service.updatePlanLimits(platformAdmin, 'STARTER', {
+        teamMembers: null,
+        monthlyTickets: 500,
+        feedbackForms: 5,
+      });
+      expect(updated.limits.teamMembers).toBeNull();
+    });
+
+    it('rejects a non-platform-admin', async () => {
+      await expect(
+        service.updatePlanLimits(ownerA, 'STARTER', { teamMembers: 25, monthlyTickets: 500, feedbackForms: 5 }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('a changed limit is actually enforced for organizations on that plan', async () => {
+      await service.updatePlanLimits(platformAdmin, 'FREE', { teamMembers: 1, monthlyTickets: 50, feedbackForms: 0 });
+      try {
+        // orgA is FREE with 2 pre-seeded members (owner + agent) from the outer beforeEach —
+        // already over the newly-lowered limit of 1, so adding a team member must now be blocked.
+        await expect(subscriptions.assertCanAddTeamMember(prisma, orgA.id)).rejects.toThrow(PlanLimitExceededException);
+      } finally {
+        await prisma.planLimit.update({ where: { plan: 'FREE' }, data: { teamMembers: 2, monthlyTickets: 50, feedbackForms: 0 } });
+      }
     });
   });
 

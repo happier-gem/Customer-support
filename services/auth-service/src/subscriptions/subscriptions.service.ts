@@ -4,7 +4,9 @@ import {
   ASSIGNABLE_TEAM_ROLES,
   PLAN_FEATURES,
   PLAN_LIMITS,
+  PLAN_TYPES,
   PlanFeature,
+  PlanLimits,
   PlanType,
   ROLES,
   RpcAuthContext,
@@ -39,9 +41,53 @@ export class SubscriptionsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  /** The static, non-tenant-specific catalog of all three plans (Part 12: GET /subscription/plans). */
-  listPlans(): SubscriptionPlanDto[] {
-    return (Object.keys(PLAN_LIMITS) as PlanType[]).map((plan) => ({ plan, limits: PLAN_LIMITS[plan] }));
+  /**
+   * Phase 10: limits are now platform-admin-editable, stored in `PlanLimit`
+   * (one seeded row per plan — see the phase10 migration). `PLAN_LIMITS` is
+   * kept only as a defensive fallback if a row is ever somehow missing, so a
+   * migration hiccup degrades to the original hardcoded defaults rather than
+   * crashing every tenant-scoped write.
+   */
+  private async getLimits(db: Db, plan: PlanType): Promise<PlanLimits> {
+    const row = await db.planLimit.findUnique({ where: { plan } });
+    if (!row) return PLAN_LIMITS[plan];
+    return { teamMembers: row.teamMembers, monthlyTickets: row.monthlyTickets, feedbackForms: row.feedbackForms };
+  }
+
+  /** The non-tenant-specific catalog of all three plans (Part 12: GET /subscription/plans). */
+  async listPlans(): Promise<SubscriptionPlanDto[]> {
+    const rows = await this.prisma.planLimit.findMany();
+    const byPlan = new Map(rows.map((r) => [r.plan, r]));
+    return (Object.keys(PLAN_TYPES) as PlanType[]).map((plan) => {
+      const row = byPlan.get(plan);
+      return {
+        plan,
+        limits: row
+          ? { teamMembers: row.teamMembers, monthlyTickets: row.monthlyTickets, feedbackForms: row.feedbackForms }
+          : PLAN_LIMITS[plan],
+      };
+    });
+  }
+
+  /**
+   * Platform-admin-only (asserted by AdminService before this is called).
+   * Always a full overwrite of all three fields, never a partial merge —
+   * the admin UI always submits the complete set, so there's no ambiguity
+   * between "field omitted" and "field explicitly cleared to unlimited".
+   */
+  async updatePlanLimits(plan: PlanType, limits: PlanLimits): Promise<SubscriptionPlanDto> {
+    const row = await this.prisma.planLimit.update({
+      where: { plan },
+      data: {
+        teamMembers: limits.teamMembers,
+        monthlyTickets: limits.monthlyTickets,
+        feedbackForms: limits.feedbackForms,
+      },
+    });
+    return {
+      plan,
+      limits: { teamMembers: row.teamMembers, monthlyTickets: row.monthlyTickets, feedbackForms: row.feedbackForms },
+    };
   }
 
   async getSubscription(authContext: RpcAuthContext): Promise<SubscriptionDto> {
@@ -75,11 +121,14 @@ export class SubscriptionsService {
       where: { id: organizationId },
       select: { plan: true, timezone: true },
     });
-    const usage = await this.getUsage(db, organizationId, org.timezone);
+    const [usage, limits] = await Promise.all([
+      this.getUsage(db, organizationId, org.timezone),
+      this.getLimits(db, org.plan as PlanType),
+    ]);
     return {
       organizationId,
       plan: org.plan as PlanType,
-      limits: PLAN_LIMITS[org.plan as PlanType],
+      limits,
       usage,
     };
   }
@@ -122,7 +171,7 @@ export class SubscriptionsService {
 
     const org = await tx.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { plan: true, timezone: true } });
     const plan = org.plan as PlanType;
-    const limit = PLAN_LIMITS[plan].monthlyTickets;
+    const limit = (await this.getLimits(tx, plan)).monthlyTickets;
     if (limit === null) return;
 
     const monthStart = startOfCurrentMonthInTimezone(org.timezone);
@@ -149,7 +198,7 @@ export class SubscriptionsService {
 
     const org = await db.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { plan: true } });
     const plan = org.plan as PlanType;
-    const limit = PLAN_LIMITS[plan].teamMembers;
+    const limit = (await this.getLimits(db, plan)).teamMembers;
     if (limit === null) return;
 
     const count = await db.user.count({
@@ -167,7 +216,7 @@ export class SubscriptionsService {
 
     const org = await tx.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { plan: true } });
     const plan = org.plan as PlanType;
-    const limit = PLAN_LIMITS[plan].feedbackForms;
+    const limit = (await this.getLimits(tx, plan)).feedbackForms;
     if (limit === null) return;
 
     const count = await tx.feedbackForm.count({ where: { organizationId } });

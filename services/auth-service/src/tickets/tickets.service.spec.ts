@@ -593,4 +593,57 @@ describe('TicketsService (integration — tenant isolation + RBAC)', () => {
       await expect(service.getAttachment(agentB, t.id, attachment.id)).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('createMessage (Phase 10 reply thread)', () => {
+    it('lets the customer and staff exchange messages, visible to both, newest last', async () => {
+      const t = await service.create(customerA, { title: 'Issue', description: 'Needs help from support' });
+
+      const customerMsg = await service.createMessage(customerA, t.id, 'Any update on this?');
+      expect(customerMsg.message.author.id).toBe(customerA.userId);
+      expect(customerMsg.message.body).toBe('Any update on this?');
+      expect(customerMsg.customerId).toBe(customerA.userId);
+
+      const agentMsg = await service.createMessage(agentA, t.id, "Looking into it now.");
+      expect(agentMsg.message.author.id).toBe(agentA.userId);
+      // The envelope's customerId is always the TICKET's customer, regardless
+      // of who authored this particular message — that's what lets the
+      // gateway route a staff reply to the right customer's room.
+      expect(agentMsg.customerId).toBe(customerA.userId);
+
+      const detail = await service.getById(customerA, t.id);
+      expect(detail.messages.map((m) => m.body)).toEqual(['Any update on this?', 'Looking into it now.']);
+    });
+
+    it('writes a MESSAGE_ADDED history entry', async () => {
+      const t = await service.create(customerA, { title: 'Issue', description: 'Needs help from support' });
+      await service.createMessage(customerA, t.id, 'Hello?');
+
+      const history = await service.getHistory(customerA, t.id);
+      expect(history.some((h) => h.action === 'MESSAGE_ADDED')).toBe(true);
+    });
+
+    it('trims whitespace and rejects a cross-tenant ticket id', async () => {
+      const t = await service.create(customerA, { title: 'Issue', description: 'Needs help from support' });
+      const msg = await service.createMessage(customerA, t.id, '  padded  ');
+      expect(msg.message.body).toBe('padded');
+
+      const ticketB = await service.create(customerB, { title: 'Org B issue', description: 'Something in org B' });
+      await expect(service.createMessage(customerA, ticketB.id, 'sneaky')).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects a customer replying to their own CLOSED ticket, but allows staff to', async () => {
+      const t = await service.create(customerA, { title: 'Issue', description: 'Needs help from support' });
+      await service.updateStatus(agentA, t.id, TICKET_STATUSES.IN_PROGRESS);
+      await service.updateStatus(agentA, t.id, TICKET_STATUSES.RESOLVED);
+      await service.updateStatus(agentA, t.id, TICKET_STATUSES.CLOSED);
+
+      await expect(service.createMessage(customerA, t.id, 'reopening?')).rejects.toThrow(ForbiddenException);
+      await expect(service.createMessage(agentA, t.id, 'closing note')).resolves.toBeDefined();
+    });
+
+    it('a different customer in the same org cannot post to a ticket that is not theirs', async () => {
+      const t = await service.create(customerA, { title: 'Issue', description: 'Needs help from support' });
+      await expect(service.createMessage(customerA2, t.id, 'not mine')).rejects.toThrow(NotFoundException);
+    });
+  });
 });

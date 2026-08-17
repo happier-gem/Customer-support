@@ -177,6 +177,13 @@ export const api = {
 
   listPlans: (accessToken: string) => request<SubscriptionPlan[]>("/admin/plans", { headers: authHeader(accessToken) }),
 
+  updatePlanLimits: (accessToken: string, plan: PlanType, limits: PlanLimits) =>
+    request<SubscriptionPlan>(`/admin/plans/${encodeURIComponent(plan)}`, {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(limits),
+    }),
+
   listNotifications: (accessToken: string, params: NotificationListParams = {}) =>
     request<Paginated<Notification>>(`/notifications${buildQuery(params)}`, { headers: authHeader(accessToken) }),
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { API_BASE } from "./api";
 
-export type TicketSocketEvent = "ticket:created" | "ticket:updated" | "ticket:attachment-added";
+export type TicketSocketEvent = "ticket:created" | "ticket:updated" | "ticket:attachment-added" | "ticket:message-added";
 
 export interface TicketSocketPayload {
   ticket?: { id: string };
@@ -41,7 +41,7 @@ export function useTicketSocket(
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
-    const events: TicketSocketEvent[] = ["ticket:created", "ticket:updated", "ticket:attachment-added"];
+    const events: TicketSocketEvent[] = ["ticket:created", "ticket:updated", "ticket:attachment-added", "ticket:message-added"];
     for (const event of events) {
       socket.on(event, (payload: TicketSocketPayload) => onEventRef.current(event, payload));
     }

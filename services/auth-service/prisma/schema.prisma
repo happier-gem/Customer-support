@@ -24,6 +24,22 @@ enum PlanType {
   PRO
 }
 
+/// Phase 10: platform-admin-editable plan limits — the DB table
+/// `PlanType`'s own former doc comment anticipated ("a future Phase 9 that
+/// lets Platform Admin edit limits would migrate PLAN_LIMITS into a real
+/// table at that point"). Seeded once (see the phase10 migration) with the
+/// same values `PLAN_LIMITS` used to hardcode; `null` still means unlimited.
+/// One row per plan, so every read is a single indexed lookup.
+model PlanLimit {
+  plan           PlanType @id
+  teamMembers    Int?
+  monthlyTickets Int?
+  feedbackForms  Int?
+  updatedAt      DateTime @updatedAt
+
+  @@map("plan_limits")
+}
+
 model Organization {
   id       String  @id @default(uuid())
   name     String
@@ -106,6 +122,7 @@ model User {
   ticketsAsAgent      Ticket[]           @relation("TicketAssignedAgent")
   ticketAttachments   TicketAttachment[]
   ticketHistoryEvents TicketHistory[]
+  ticketMessages      TicketMessage[]    @relation("TicketMessageAuthor")
 
   feedbackFormsCreated FeedbackForm[]     @relation("FeedbackFormCreator")
   feedbackResponses    FeedbackResponse[] @relation("FeedbackResponseCustomer")
@@ -173,6 +190,7 @@ enum TicketHistoryAction {
   STATUS_CHANGED
   UPDATED
   ATTACHMENT_ADDED
+  MESSAGE_ADDED
 }
 
 /// Phase 4: a customer's support ticket, always owned by exactly one
@@ -211,6 +229,7 @@ model Ticket {
 
   attachments TicketAttachment[]
   history     TicketHistory[]
+  messages    TicketMessage[]
 
   @@index([organizationId, status])
   @@index([organizationId, priority])
@@ -218,6 +237,31 @@ model Ticket {
   @@index([organizationId, customerId])
   @@index([organizationId, createdAt])
   @@map("tickets")
+}
+
+/// Phase 10: a free-text reply on a ticket's conversation thread, distinct
+/// from TicketHistory's structured lifecycle events (created/assigned/status-
+/// changed/etc.) — a message carries no state transition, just a note
+/// visible to everyone with access to the ticket (its customer, any staff in
+/// the org). `organizationId` is denormalized for the same tenant-scoped-
+/// query-without-a-join reason as TicketAttachment.organizationId above.
+model TicketMessage {
+  id       String @id @default(uuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  organizationId String
+
+  authorId String
+  author   User   @relation("TicketMessageAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  body String
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([organizationId])
+  @@map("ticket_messages")
 }
 
 /// A file attached to a ticket. `storedFileName` is a server-generated,
@@ -413,6 +457,7 @@ enum NotificationType {
   TICKET_STATUS_CHANGED
   TICKET_RESOLVED
   TICKET_CLOSED
+  TICKET_MESSAGE_ADDED
   TEAM_INVITATION_ACCEPTED
   TEAM_MEMBER_ROLE_CHANGED
   TEAM_MEMBER_REMOVED

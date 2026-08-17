@@ -1,12 +1,14 @@
-import { Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import {
   ADMIN_PATTERNS,
   AdminOrganizationDto,
   AdminOrganizationQueryDto,
   PaginatedResult,
+  PlanType,
   PlatformStatsDto,
   ROLES,
   SubscriptionPlanDto,
+  UpdatePlanLimitsDto,
 } from '@app/shared';
 import { AuthGatewayService } from '../auth/auth-gateway.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -71,5 +73,22 @@ export class AdminController {
   @Get('plans')
   async listPlans(@CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<SubscriptionPlanDto[]>(ADMIN_PATTERNS.LIST_PLANS, { authContext: user });
+  }
+
+  @Patch('plans/:plan')
+  async updatePlanLimits(
+    @Param('plan') plan: PlanType,
+    @Body() dto: UpdatePlanLimitsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.authGateway.send<SubscriptionPlanDto>(ADMIN_PATTERNS.UPDATE_PLAN_LIMITS, {
+      authContext: user,
+      plan,
+      limits: {
+        teamMembers: dto.teamMembers ?? null,
+        monthlyTickets: dto.monthlyTickets ?? null,
+        feedbackForms: dto.feedbackForms ?? null,
+      },
+    });
   }
 }
