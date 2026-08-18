@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Notification } from "@/lib/api";
+import { useTicketSocket } from "@/lib/use-ticket-socket";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -82,6 +83,15 @@ export function NotificationBell() {
       return next;
     });
   }
+
+  // Opportunistic: any ticket activity likely also created a notification for
+  // this user, so refresh the badge immediately instead of waiting for the
+  // next poll tick. Reuses the existing ticket socket channel rather than a
+  // dedicated notification socket.
+  useTicketSocket(accessToken, () => {
+    refreshUnreadCount();
+    if (open) loadNotifications();
+  });
 
   function handleNotificationClick(notification: Notification) {
     if (!accessToken) return;

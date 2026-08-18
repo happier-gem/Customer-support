@@ -45,6 +45,15 @@ export interface PublicUser {
   organizationId: string;
   role: string;
   emailVerified: boolean;
+  avatarUrl: string | null;
+}
+
+export interface JoinLink {
+  code: string;
+  joinUrl: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LoginResponse {
@@ -370,6 +379,45 @@ export const api = {
   me: (accessToken: string) =>
     request<PublicUser>("/auth/me", { headers: authHeader(accessToken) }),
 
+  changePassword: (accessToken: string, currentPassword: string, newPassword: string) =>
+    request<{ message: string }>("/auth/me/password", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  updateProfile: (accessToken: string, body: { name?: string }) =>
+    request<PublicUser>("/auth/me/profile", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
+
+  uploadAvatar: (accessToken: string, file: File) => {
+    const formData = new FormData();
+    formData.append("avatar", file);
+    return request<PublicUser>("/auth/me/avatar", {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: formData,
+    });
+  },
+
+  getCustomerAccessLink: (accessToken: string) =>
+    request<JoinLink>("/organizations/me/customer-access", { headers: authHeader(accessToken) }),
+
+  regenerateCustomerAccessLink: (accessToken: string) =>
+    request<JoinLink>("/organizations/me/customer-access/regenerate", {
+      method: "POST",
+      headers: authHeader(accessToken),
+    }),
+
+  revokeCustomerAccessLink: (accessToken: string) =>
+    request<JoinLink>("/organizations/me/customer-access/revoke", {
+      method: "POST",
+      headers: authHeader(accessToken),
+    }),
+
   getOrganization: (accessToken: string) =>
     request<Organization>("/organizations/me", { headers: authHeader(accessToken) }),
 
@@ -571,4 +619,10 @@ export const api = {
 
   markAllNotificationsRead: (accessToken: string) =>
     request<{ count: number }>("/notifications/read-all", { method: "PATCH", headers: authHeader(accessToken) }),
+
+  deleteNotification: (accessToken: string, id: string) =>
+    request<{ message: string }>(`/notifications/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeader(accessToken),
+    }),
 };

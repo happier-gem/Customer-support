@@ -39,6 +39,7 @@ export interface PublicUser {
   organizationId: string;
   role: string;
   emailVerified: boolean;
+  avatarUrl: string | null;
 }
 
 export interface LoginResponse {
@@ -249,6 +250,30 @@ export const api = {
 
   me: (accessToken: string) => request<PublicUser>("/auth/me", { headers: authHeader(accessToken) }),
 
+  changePassword: (accessToken: string, currentPassword: string, newPassword: string) =>
+    request<{ message: string }>("/auth/me/password", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  updateProfile: (accessToken: string, body: { name?: string }) =>
+    request<PublicUser>("/auth/me/profile", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
+
+  uploadAvatar: (accessToken: string, file: File) => {
+    const formData = new FormData();
+    formData.append("avatar", file);
+    return request<PublicUser>("/auth/me/avatar", {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: formData,
+    });
+  },
+
   listTickets: (accessToken: string, params: TicketListParams) =>
     request<Paginated<Ticket>>(`/tickets${buildQuery(params)}`, { headers: authHeader(accessToken) }),
 
@@ -317,4 +342,10 @@ export const api = {
 
   markAllNotificationsRead: (accessToken: string) =>
     request<{ count: number }>("/notifications/read-all", { method: "PATCH", headers: authHeader(accessToken) }),
+
+  deleteNotification: (accessToken: string, id: string) =>
+    request<{ message: string }>(`/notifications/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeader(accessToken),
+    }),
 };

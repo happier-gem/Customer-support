@@ -391,4 +391,105 @@ describe('AdminService (integration — platform-admin authorization + cross-ten
       expect(orgADetail.activeMemberCount).toBe(2);
     });
   });
+
+  // ---------------------------------------------------------------------
+  // Phase 10: cross-tenant user management
+  // ---------------------------------------------------------------------
+  describe('listUsers', () => {
+    it('a platform admin sees users across every organization', async () => {
+      const result = await service.listUsers(platformAdmin, {});
+      // Owner A, Agent A, Customer A, Owner B, Platform Admin.
+      expect(result.pagination.total).toBe(5);
+    });
+
+    it('a non-platform-admin cannot list users', async () => {
+      await expect(service.listUsers(ownerA, {})).rejects.toThrow(ForbiddenException);
+      await expect(service.listUsers(agentA, {})).rejects.toThrow(ForbiddenException);
+      await expect(service.listUsers(customerA, {})).rejects.toThrow(ForbiddenException);
+    });
+
+    it('filters by organizationId', async () => {
+      const result = await service.listUsers(platformAdmin, { organizationId: orgA.id });
+      expect(result.data.every((u) => u.organizationId === orgA.id)).toBe(true);
+      expect(result.data).toHaveLength(3);
+    });
+
+    it('filters by role', async () => {
+      const result = await service.listUsers(platformAdmin, { role: ROLES.SUPPORT_AGENT });
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].role).toBe(ROLES.SUPPORT_AGENT);
+    });
+
+    it('filters by search (name or email, case-insensitive)', async () => {
+      const result = await service.listUsers(platformAdmin, { search: 'owner a' });
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].name).toBe('Owner A');
+    });
+
+    it('never includes password hashes, OTP data, or tokens', async () => {
+      const result = await service.listUsers(platformAdmin, {});
+      for (const user of result.data) {
+        expect(user).not.toHaveProperty('passwordHash');
+        expect(user).not.toHaveProperty('emailVerificationOtpHash');
+        expect(user).not.toHaveProperty('passwordResetTokenHash');
+        expect(user).not.toHaveProperty('refreshTokenHash');
+      }
+    });
+  });
+
+  describe('setUserActive', () => {
+    it('a platform admin can deactivate and reactivate a user', async () => {
+      const orgAUsers = await prisma.user.findMany({ where: { organizationId: orgA.id, role: ROLES.CUSTOMER } });
+      const target = orgAUsers[0];
+
+      const deactivated = await service.setUserActive(platformAdmin, target.id, false);
+      expect(deactivated.isActive).toBe(false);
+
+      const reactivated = await service.setUserActive(platformAdmin, target.id, true);
+      expect(reactivated.isActive).toBe(true);
+    });
+
+    it('deactivating a user clears their refresh session', async () => {
+      const orgAUsers = await prisma.user.findMany({ where: { organizationId: orgA.id, role: ROLES.CUSTOMER } });
+      const target = orgAUsers[0];
+      await prisma.user.update({ where: { id: target.id }, data: { refreshTokenHash: 'some-hash' } });
+
+      await service.setUserActive(platformAdmin, target.id, false);
+
+      const reloaded = await prisma.user.findUnique({ where: { id: target.id } });
+      expect(reloaded?.refreshTokenHash).toBeNull();
+    });
+
+    it('never changes role', async () => {
+      const orgAUsers = await prisma.user.findMany({ where: { organizationId: orgA.id, role: ROLES.SUPPORT_AGENT } });
+      const target = orgAUsers[0];
+
+      await service.setUserActive(platformAdmin, target.id, false);
+
+      const reloaded = await prisma.user.findUnique({ where: { id: target.id } });
+      expect(reloaded?.role).toBe(ROLES.SUPPORT_AGENT);
+    });
+
+    it('a non-platform-admin cannot deactivate users', async () => {
+      const orgAUsers = await prisma.user.findMany({ where: { organizationId: orgA.id, role: ROLES.CUSTOMER } });
+      const target = orgAUsers[0];
+      await expect(service.setUserActive(ownerA, target.id, false)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws NotFoundException for an unknown user id', async () => {
+      await expect(service.setUserActive(platformAdmin, 'does-not-exist', false)).rejects.toThrow(NotFoundException);
+    });
+
+    it('a deactivated user cannot log in', async () => {
+      const orgAUsers = await prisma.user.findMany({ where: { organizationId: orgA.id, role: ROLES.CUSTOMER } });
+      const target = orgAUsers[0];
+      await service.setUserActive(platformAdmin, target.id, false);
+
+      const reloaded = await prisma.user.findUnique({ where: { id: target.id } });
+      expect(reloaded?.isActive).toBe(false);
+      // Login-blocking behavior itself is covered by AuthService.login's own
+      // `!user.isActive` check (see auth/auth.service.ts) — this just confirms
+      // the admin action actually persists the flag that check relies on.
+    });
+  });
 });

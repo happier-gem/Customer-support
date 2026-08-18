@@ -11,7 +11,10 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { ...(options.headers as Record<string, string> | undefined) };
-  if (options.body && !headers["Content-Type"]) {
+  // Leave FormData bodies alone: the browser sets the multipart boundary
+  // itself, and overriding it with "application/json" would corrupt the upload.
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (options.body && !isFormData && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -38,6 +41,28 @@ export interface PublicUser {
   organizationId: string;
   role: string;
   emailVerified: boolean;
+  avatarUrl: string | null;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  organizationId: string;
+  organizationName: string;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+}
+
+export interface AdminUserListParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  role?: string;
+  organizationId?: string;
+  status?: "ACTIVE" | "DEACTIVATED";
 }
 
 export interface LoginResponse {
@@ -152,6 +177,45 @@ export const api = {
 
   me: (accessToken: string) => request<PublicUser>("/auth/me", { headers: authHeader(accessToken) }),
 
+  changePassword: (accessToken: string, currentPassword: string, newPassword: string) =>
+    request<{ message: string }>("/auth/me/password", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  updateProfile: (accessToken: string, body: { name?: string }) =>
+    request<PublicUser>("/auth/me/profile", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
+
+  uploadAvatar: (accessToken: string, file: File) => {
+    const formData = new FormData();
+    formData.append("avatar", file);
+    return request<PublicUser>("/auth/me/avatar", {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: formData,
+    });
+  },
+
+  listUsers: (accessToken: string, params: AdminUserListParams = {}) =>
+    request<Paginated<AdminUser>>(`/admin/users${buildQuery(params)}`, { headers: authHeader(accessToken) }),
+
+  deactivateUser: (accessToken: string, id: string) =>
+    request<AdminUser>(`/admin/users/${encodeURIComponent(id)}/deactivate`, {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+    }),
+
+  reactivateUser: (accessToken: string, id: string) =>
+    request<AdminUser>(`/admin/users/${encodeURIComponent(id)}/reactivate`, {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+    }),
+
   getPlatformStats: (accessToken: string) =>
     request<PlatformStats>("/admin/stats", { headers: authHeader(accessToken) }),
 
@@ -198,4 +262,10 @@ export const api = {
 
   markAllNotificationsRead: (accessToken: string) =>
     request<{ count: number }>("/notifications/read-all", { method: "PATCH", headers: authHeader(accessToken) }),
+
+  deleteNotification: (accessToken: string, id: string) =>
+    request<{ message: string }>(`/notifications/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeader(accessToken),
+    }),
 };

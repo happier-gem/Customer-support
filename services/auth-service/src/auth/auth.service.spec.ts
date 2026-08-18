@@ -2,8 +2,9 @@ import { Test } from '@nestjs/testing';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
-import { BadRequestException, ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { ROLES, RpcAuthContext } from '@app/shared';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
@@ -22,6 +23,7 @@ describe('AuthService (integration)', () => {
   let prisma: PrismaService;
   let jwt: JwtService;
   let mail: MailService;
+  let customerJoin: CustomerJoinService;
 
   const baseRegisterDto = {
     organizationName: 'Acme Corp',
@@ -52,6 +54,7 @@ describe('AuthService (integration)', () => {
     prisma = moduleRef.get(PrismaService);
     jwt = moduleRef.get(JwtService);
     mail = moduleRef.get(MailService);
+    customerJoin = moduleRef.get(CustomerJoinService);
 
     await prisma.$connect();
   });
@@ -123,6 +126,75 @@ describe('AuthService (integration)', () => {
       expect(otp).toMatch(/^\d{6}$/);
       expect(user?.emailVerificationOtpHash).not.toBe(otp);
       expect(user?.emailVerificationOtpHash).toBe(hashToken(otp));
+    });
+  });
+
+  describe('registerCustomer (Phase 10 — resolves the organization from a join token, never a client-supplied id)', () => {
+    async function makeOwnerAndJoinToken(orgName = 'Beta Inc') {
+      const passwordHash = await argon2.hash('OwnerPass123');
+      const org = await prisma.organization.create({ data: { name: orgName } });
+      const owner = await prisma.user.create({
+        data: { organizationId: org.id, name: 'Owner', email: `owner-${org.id}@beta.test`, passwordHash, role: 'TENANT_OWNER', emailVerified: true },
+      });
+      const authContext: RpcAuthContext = { userId: owner.id, email: owner.email, organizationId: org.id, role: ROLES.TENANT_OWNER };
+      const link = await customerJoin.getOrCreate(authContext);
+      const preview = await customerJoin.resolveByCode(link.code);
+      return { org, joinToken: preview.joinToken };
+    }
+
+    it('creates the customer under the organization the join token resolves to', async () => {
+      const { org, joinToken } = await makeOwnerAndJoinToken();
+      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+
+      const result = await authService.registerCustomer({
+        joinToken,
+        name: 'Casey Customer',
+        email: 'casey@beta.test',
+        password: 'CustomerPass123',
+      });
+
+      expect(result.organizationId).toBe(org.id);
+      const user = await prisma.user.findUnique({ where: { id: result.userId } });
+      expect(user?.organizationId).toBe(org.id);
+      expect(user?.role).toBe('CUSTOMER');
+      expect(sendSpy).toHaveBeenCalledWith('casey@beta.test', expect.any(String), expect.objectContaining({ organizationName: org.name }));
+    });
+
+    it('rejects an invalid join token', async () => {
+      await expect(
+        authService.registerCustomer({ joinToken: 'not-a-real-token', name: 'X', email: 'x@beta.test', password: 'CustomerPass123' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects a revoked join token', async () => {
+      const passwordHash = await argon2.hash('OwnerPass123');
+      const org = await prisma.organization.create({ data: { name: 'Gamma LLC' } });
+      const owner = await prisma.user.create({
+        data: { organizationId: org.id, name: 'Owner', email: `owner-${org.id}@gamma.test`, passwordHash, role: 'TENANT_OWNER', emailVerified: true },
+      });
+      const authContext: RpcAuthContext = { userId: owner.id, email: owner.email, organizationId: org.id, role: ROLES.TENANT_OWNER };
+      const link = await customerJoin.getOrCreate(authContext);
+      const preview = await customerJoin.resolveByCode(link.code);
+      await customerJoin.revoke(authContext);
+
+      await expect(
+        authService.registerCustomer({ joinToken: preview.joinToken, name: 'X', email: 'x2@gamma.test', password: 'CustomerPass123' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("a join token never lets a customer land in the wrong organization", async () => {
+      const { org: orgBeta, joinToken } = await makeOwnerAndJoinToken('Beta Inc');
+      await makeOwnerAndJoinToken('Delta Co'); // a second org exists, proving the token is org-specific
+      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+
+      const result = await authService.registerCustomer({
+        joinToken,
+        name: 'Casey',
+        email: 'casey2@beta.test',
+        password: 'CustomerPass123',
+      });
+
+      expect(result.organizationId).toBe(orgBeta.id);
     });
   });
 
@@ -468,6 +540,66 @@ describe('AuthService (integration)', () => {
       await authService.resetPassword({ token: resetToken, newPassword: 'BrandNewPass456' });
 
       await expect(authService.refresh(tokens.refreshToken)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('changePassword (Phase 10 — self-service, requires proving the current password)', () => {
+    it('changes the password when the current password is correct', async () => {
+      const { user } = await registerVerifyAndLogin();
+      const authContext: RpcAuthContext = { userId: user.id, email: user.email, organizationId: user.organizationId, role: user.role };
+
+      await authService.changePassword(authContext, { currentPassword: baseRegisterDto.password, newPassword: 'BrandNewPass456' });
+
+      await expect(
+        authService.login({ email: baseRegisterDto.email, password: baseRegisterDto.password }),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        authService.login({ email: baseRegisterDto.email, password: 'BrandNewPass456' }),
+      ).resolves.toBeDefined();
+    });
+
+    it('rejects an incorrect current password and leaves the password unchanged', async () => {
+      const { user } = await registerVerifyAndLogin();
+      const authContext: RpcAuthContext = { userId: user.id, email: user.email, organizationId: user.organizationId, role: user.role };
+
+      await expect(
+        authService.changePassword(authContext, { currentPassword: 'WrongPassword1', newPassword: 'BrandNewPass456' }),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        authService.login({ email: baseRegisterDto.email, password: baseRegisterDto.password }),
+      ).resolves.toBeDefined();
+    });
+
+    it('invalidates existing refresh-token sessions', async () => {
+      const { user, tokens } = await registerVerifyAndLogin();
+      const authContext: RpcAuthContext = { userId: user.id, email: user.email, organizationId: user.organizationId, role: user.role };
+
+      await authService.changePassword(authContext, { currentPassword: baseRegisterDto.password, newPassword: 'BrandNewPass456' });
+
+      await expect(authService.refresh(tokens.refreshToken)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('updateProfile (Phase 10 — self-service, name/avatar only)', () => {
+    it('updates the name and leaves everything else untouched', async () => {
+      const { user } = await registerVerifyAndLogin();
+      const authContext: RpcAuthContext = { userId: user.id, email: user.email, organizationId: user.organizationId, role: user.role };
+
+      const updated = await authService.updateProfile(authContext, { name: 'New Name' });
+
+      expect(updated.name).toBe('New Name');
+      expect(updated.email).toBe(user.email);
+      expect(updated.role).toBe(user.role);
+      expect(updated.organizationId).toBe(user.organizationId);
+    });
+
+    it('can set an avatar url', async () => {
+      const { user } = await registerVerifyAndLogin();
+      const authContext: RpcAuthContext = { userId: user.id, email: user.email, organizationId: user.organizationId, role: user.role };
+
+      const updated = await authService.updateProfile(authContext, { avatarUrl: '/uploads/avatars/abc.png' });
+      expect(updated.avatarUrl).toBe('/uploads/avatars/abc.png');
     });
   });
 });

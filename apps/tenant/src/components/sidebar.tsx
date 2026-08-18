@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  Bell,
   Building2,
   ChevronsLeft,
   ChevronsRight,
@@ -13,6 +14,8 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  QrCode,
+  ShieldCheck,
   Ticket,
   UserCircle,
   Users,
@@ -34,11 +37,14 @@ const BASE_ITEMS: NavItem[] = [
 
 const OWNER_ITEMS: NavItem[] = [
   { href: "/settings/team", label: "Team", icon: Users },
+  { href: "/settings/customer-access", label: "Customer Access", icon: QrCode },
   { href: "/feedback", label: "Feedback", icon: MessageSquare },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/settings/subscription", label: "Subscription", icon: CreditCard },
-  { href: "/settings/organization", label: "Organization", icon: Building2 },
+  { href: "/settings/organization", label: "Organization Settings", icon: Building2 },
 ];
+
+const NOTIFICATIONS_ITEM: NavItem = { href: "/notifications", label: "Notifications", icon: Bell };
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -49,7 +55,7 @@ export function Sidebar() {
 
   if (!user) return null;
 
-  const items = user.role === "TENANT_OWNER" ? [...BASE_ITEMS, ...OWNER_ITEMS] : BASE_ITEMS;
+  const items = user.role === "TENANT_OWNER" ? [...BASE_ITEMS, ...OWNER_ITEMS, NOTIFICATIONS_ITEM] : [...BASE_ITEMS, NOTIFICATIONS_ITEM];
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -93,18 +99,34 @@ export function Sidebar() {
       <div className="border-t border-gray-200 p-2">
         <div className={`mb-1 flex items-center gap-2 px-2 py-2 ${collapsed ? "justify-center" : ""}`}>
           <NotificationBell />
-          {!collapsed && <span className="min-w-0 flex-1 truncate text-sm text-gray-600">{user.name}</span>}
+          {!collapsed && (
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm text-gray-600">{user.name}</span>
+              <span className="block truncate text-xs text-gray-400">{user.role.replace(/_/g, " ")}</span>
+            </span>
+          )}
         </div>
         <Link
-          href="/profile"
+          href="/settings/profile"
           onClick={() => setMobileOpen(false)}
           title={collapsed ? "Profile" : undefined}
           className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            isActive("/profile") ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+            isActive("/settings/profile") ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
           } ${collapsed ? "justify-center" : ""}`}
         >
           <UserCircle className="h-4 w-4 shrink-0" />
           {!collapsed && <span>Profile</span>}
+        </Link>
+        <Link
+          href="/settings/security"
+          onClick={() => setMobileOpen(false)}
+          title={collapsed ? "Security" : undefined}
+          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+            isActive("/settings/security") ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+          } ${collapsed ? "justify-center" : ""}`}
+        >
+          <ShieldCheck className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Security</span>}
         </Link>
         <button
           type="button"

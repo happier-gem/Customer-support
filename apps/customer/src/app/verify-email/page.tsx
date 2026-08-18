@@ -65,7 +65,7 @@ function VerifyEmailContent() {
     return (
       <AuthCard title="Missing email" subtitle="We couldn't tell which account to verify.">
         <p className={errorTextClass}>This verification link is missing an email address.</p>
-        <Link href="/register" className={`${linkClass} block text-center text-sm`}>
+        <Link href="/join" className={`${linkClass} block text-center text-sm`}>
           Back to registration
         </Link>
       </AuthCard>
@@ -106,7 +106,7 @@ function VerifyEmailContent() {
 
         <p className="text-center text-sm text-gray-500">
           Wrong email?{" "}
-          <Link href="/register" className={linkClass}>
+          <Link href="/join" className={linkClass}>
             Start over
           </Link>
         </p>

@@ -39,6 +39,12 @@ export interface PublicUser {
   organizationId: string;
   role: string;
   emailVerified: boolean;
+  avatarUrl: string | null;
+}
+
+export interface JoinPreview {
+  organizationName: string;
+  joinToken: string;
 }
 
 export interface LoginResponse {
@@ -229,11 +235,17 @@ function buildQuery(params: object): string {
 }
 
 export const api = {
-  registerCustomer: (body: { organizationId: string; name: string; email: string; password: string }) =>
+  registerCustomer: (body: { joinToken: string; name: string; email: string; password: string }) =>
     request<{ message: string; organizationId: string; userId: string }>("/auth/register-customer", {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  resolveJoinToken: (token: string) =>
+    request<JoinPreview>(`/join/customer/${encodeURIComponent(token)}`),
+
+  resolveJoinCode: (code: string) =>
+    request<JoinPreview>(`/join/customer/code/${encodeURIComponent(code)}`),
 
   verifyEmail: (email: string, otp: string) =>
     request<{ message: string }>("/auth/verify-email", {
@@ -270,6 +282,30 @@ export const api = {
     }),
 
   me: (accessToken: string) => request<PublicUser>("/auth/me", { headers: authHeader(accessToken) }),
+
+  changePassword: (accessToken: string, currentPassword: string, newPassword: string) =>
+    request<{ message: string }>("/auth/me/password", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  updateProfile: (accessToken: string, body: { name?: string }) =>
+    request<PublicUser>("/auth/me/profile", {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
+
+  uploadAvatar: (accessToken: string, file: File) => {
+    const formData = new FormData();
+    formData.append("avatar", file);
+    return request<PublicUser>("/auth/me/avatar", {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: formData,
+    });
+  },
 
   listTickets: (accessToken: string, params: TicketListParams) =>
     request<Paginated<Ticket>>(`/tickets${buildQuery(params)}`, { headers: authHeader(accessToken) }),
@@ -341,4 +377,10 @@ export const api = {
 
   markAllNotificationsRead: (accessToken: string) =>
     request<{ count: number }>("/notifications/read-all", { method: "PATCH", headers: authHeader(accessToken) }),
+
+  deleteNotification: (accessToken: string, id: string) =>
+    request<{ message: string }>(`/notifications/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeader(accessToken),
+    }),
 };

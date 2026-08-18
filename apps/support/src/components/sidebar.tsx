@@ -4,12 +4,14 @@ import { useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  Bell,
   ChevronsLeft,
   ChevronsRight,
   LayoutDashboard,
   LogOut,
   Menu,
   MessageSquare,
+  ShieldCheck,
   Ticket,
   UserCheck,
   UserCircle,
@@ -29,6 +31,7 @@ const ITEMS: NavItem[] = [
   { href: "/tickets", label: "Tickets", icon: Ticket },
   { href: "/tickets?assignee=me", label: "Assigned Tickets", icon: UserCheck },
   { href: "/feedback", label: "Feedback", icon: MessageSquare },
+  { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 
 export function Sidebar() {
@@ -89,18 +92,34 @@ export function Sidebar() {
       <div className="border-t border-gray-200 p-2">
         <div className={`mb-1 flex items-center gap-2 px-2 py-2 ${collapsed ? "justify-center" : ""}`}>
           <NotificationBell />
-          {!collapsed && <span className="min-w-0 flex-1 truncate text-sm text-gray-600">{user.name}</span>}
+          {!collapsed && (
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm text-gray-600">{user.name}</span>
+              <span className="block truncate text-xs text-gray-400">{user.role.replace(/_/g, " ")}</span>
+            </span>
+          )}
         </div>
         <Link
-          href="/profile"
+          href="/settings/profile"
           onClick={() => setMobileOpen(false)}
           title={collapsed ? "Profile" : undefined}
           className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            isActive("/profile") ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+            isActive("/settings/profile") ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
           } ${collapsed ? "justify-center" : ""}`}
         >
           <UserCircle className="h-4 w-4 shrink-0" />
           {!collapsed && <span>Profile</span>}
+        </Link>
+        <Link
+          href="/settings/security"
+          onClick={() => setMobileOpen(false)}
+          title={collapsed ? "Security" : undefined}
+          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+            isActive("/settings/security") ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+          } ${collapsed ? "justify-center" : ""}`}
+        >
+          <ShieldCheck className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Security</span>}
         </Link>
         <button
           type="button"

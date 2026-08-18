@@ -14,6 +14,8 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-fetches /auth/me and updates the cached user — call after editing name/avatar so the sidebar/profile reflect it immediately. */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -50,7 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, accessToken: null, status: "unauthenticated" });
   }, []);
 
-  return <AuthContext.Provider value={{ ...state, login, logout }}>{children}</AuthContext.Provider>;
+  const refreshUser = useCallback(async () => {
+    if (!state.accessToken) return;
+    const user = await api.me(state.accessToken);
+    setState((s) => ({ ...s, user }));
+  }, [state.accessToken]);
+
+  return <AuthContext.Provider value={{ ...state, login, logout, refreshUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError, type Paginated, type Ticket, type TicketPriority, type TicketStatus } from "@/lib/api";
+import { useTicketSocket } from "@/lib/use-ticket-socket";
 import {
   buttonClass,
   cardClass,
@@ -60,6 +61,10 @@ export default function TenantTicketsPage() {
     load();
   }, [load]);
 
+  const { connected } = useTicketSocket(accessToken, () => {
+    load();
+  });
+
   if (status === "loading" || !user) {
     return (
       <main className="flex flex-1 items-center justify-center bg-gray-50">
@@ -70,7 +75,16 @@ export default function TenantTicketsPage() {
 
   return (
           <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-900">Organization Tickets</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-gray-900">Organization Tickets</h1>
+          <span
+            className="flex items-center gap-1 text-xs text-gray-400"
+            title={connected ? "Live updates connected" : "Live updates unavailable"}
+          >
+            <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-green-500" : "bg-gray-300"}`} />
+            {connected ? "Live" : "Offline"}
+          </span>
+        </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <input
