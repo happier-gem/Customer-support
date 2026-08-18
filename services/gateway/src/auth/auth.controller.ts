@@ -1,16 +1,21 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import {
   AUTH_PATTERNS,
@@ -22,6 +27,8 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   RefreshTokenDto,
+  ChangePasswordDto,
+  UpdateProfileDto,
   PublicUser,
   TokenPair,
 } from '@app/shared';
@@ -30,6 +37,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthenticatedUser } from './strategies/jwt.strategy';
 import { parseDurationMs } from './utils/duration.util';
+import { avatarPublicPath, avatarUploadOptions } from './avatar-upload.config';
 
 const REFRESH_COOKIE_NAME = 'refresh_token';
 
@@ -138,5 +146,30 @@ export class AuthController {
   @Get('me')
   async me(@CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<PublicUser>(AUTH_PATTERNS.ME, { userId: user.userId });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/password')
+  async changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<{ message: string }>(AUTH_PATTERNS.CHANGE_PASSWORD, { authContext: user, dto });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/profile')
+  async updateProfile(@Body() dto: UpdateProfileDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<PublicUser>(AUTH_PATTERNS.UPDATE_PROFILE, { authContext: user, dto });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/avatar')
+  @UseInterceptors(FileInterceptor('avatar', avatarUploadOptions))
+  async uploadAvatar(@UploadedFile() file: Express.Multer.File | undefined, @CurrentUser() user: AuthenticatedUser) {
+    if (!file) {
+      throw new BadRequestException('No avatar file was provided.');
+    }
+    return this.authGateway.send<PublicUser>(AUTH_PATTERNS.UPDATE_PROFILE, {
+      authContext: user,
+      dto: { avatarUrl: avatarPublicPath(file.filename) },
+    });
   }
 }

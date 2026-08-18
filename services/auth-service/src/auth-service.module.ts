@@ -11,6 +11,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
+import { CustomerJoinModule } from './customer-join/customer-join.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AdminModule } from './admin/admin.module';
     AnalyticsModule,
     NotificationsModule,
     AdminModule,
+    CustomerJoinModule,
   ],
 })
 export class AuthServiceModule {}

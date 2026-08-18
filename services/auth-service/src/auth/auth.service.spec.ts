@@ -7,6 +7,7 @@ import * as argon2 from 'argon2';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { CustomerJoinService } from '../customer-join/customer-join.service';
 import { hashToken } from './utils/token.util';
 
 /**
@@ -44,7 +45,7 @@ describe('AuthService (integration)', () => {
           }),
         }),
       ],
-      providers: [AuthService, PrismaService, MailService],
+      providers: [AuthService, PrismaService, MailService, CustomerJoinService],
     }).compile();
 
     authService = moduleRef.get(AuthService);

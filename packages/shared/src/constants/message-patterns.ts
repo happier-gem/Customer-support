@@ -10,6 +10,8 @@ export const AUTH_PATTERNS = {
   FORGOT_PASSWORD: 'auth.forgot-password',
   RESET_PASSWORD: 'auth.reset-password',
   ME: 'auth.me',
+  CHANGE_PASSWORD: 'auth.change-password',
+  UPDATE_PROFILE: 'auth.update-profile',
 } as const;
 
 export const AUTH_SERVICE_CLIENT = 'AUTH_SERVICE_CLIENT';
@@ -99,4 +101,15 @@ export const ADMIN_PATTERNS = {
   PLATFORM_STATS: 'admin.stats',
   LIST_PLANS: 'admin.plans.list',
   UPDATE_PLAN_LIMITS: 'admin.plans.update-limits',
+  LIST_USERS: 'admin.users.list',
+  SET_USER_ACTIVE: 'admin.users.set-active',
+} as const;
+
+/** TCP message patterns for the Phase 10 customer-organization-join system, served by the auth-service. */
+export const CUSTOMER_JOIN_PATTERNS = {
+  GET_OR_CREATE: 'customer-join.get-or-create',
+  REGENERATE: 'customer-join.regenerate',
+  REVOKE: 'customer-join.revoke',
+  RESOLVE_BY_TOKEN: 'customer-join.resolve-by-token',
+  RESOLVE_BY_CODE: 'customer-join.resolve-by-code',
 } as const;

@@ -11,6 +11,7 @@ import { TICKET_ATTACHMENTS_DIR } from './tickets/ticket-attachment-upload.confi
 
 async function bootstrap() {
   mkdirSync(join(UPLOADS_DIR, 'logos'), { recursive: true });
+  mkdirSync(join(UPLOADS_DIR, 'avatars'), { recursive: true });
   mkdirSync(TICKET_ATTACHMENTS_DIR, { recursive: true });
 
   const app = await NestFactory.create<NestExpressApplication>(GatewayModule);

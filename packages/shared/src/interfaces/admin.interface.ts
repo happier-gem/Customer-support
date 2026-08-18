@@ -1,4 +1,5 @@
 import type { PlanType } from '../constants/subscription';
+import type { Role } from '../constants/roles';
 
 /**
  * Phase 9: platform-level view of one organization — used by both `GET /admin/organizations`
@@ -36,4 +37,22 @@ export interface PlatformStatsDto {
     feedbackForms: number;
     activeTeamMembers: number;
   };
+}
+
+/**
+ * Phase 10: platform-level view of one user account — used by `GET /admin/users`.
+ * Never includes passwordHash, OTP hash/attempts, password-reset token hash,
+ * refresh-token hash, or any other secret — only what a platform admin needs
+ * to find and (de)activate an account.
+ */
+export interface AdminUserDto {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  organizationId: string;
+  organizationName: string;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: string;
 }

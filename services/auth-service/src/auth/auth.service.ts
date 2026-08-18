@@ -13,6 +13,7 @@ import * as argon2 from 'argon2';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { CustomerJoinService } from '../customer-join/customer-join.service';
 import {
   RegisterDto,
   RegisterCustomerDto,
@@ -21,8 +22,11 @@ import {
   ResendOtpDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  ChangePasswordDto,
+  UpdateProfileDto,
   PublicUser,
   ROLES,
+  RpcAuthContext,
   TokenPair,
 } from '@app/shared';
 import { generateSecureToken, generateOtp, hashToken, safeCompareHex } from './utils/token.util';
@@ -35,6 +39,7 @@ function toPublicUser(user: User): PublicUser {
     organizationId: user.organizationId,
     role: user.role,
     emailVerified: user.emailVerified,
+    avatarUrl: user.avatarUrl,
   };
 }
 
@@ -60,6 +65,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly customerJoin: CustomerJoinService,
   ) {}
 
   private get accessTokenExpiresIn(): StringValue {
@@ -148,7 +154,7 @@ export class AuthService {
       throw err;
     }
 
-    await this.mail.sendOtpEmail(email, otp);
+    await this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim() });
 
     return {
       message: 'Registration successful. Please check your email for a verification code.',
@@ -166,7 +172,12 @@ export class AuthService {
   async registerCustomer(dto: RegisterCustomerDto): Promise<{ message: string; organizationId: string; userId: string }> {
     const email = dto.email.trim().toLowerCase();
 
-    const organization = await this.prisma.organization.findUnique({ where: { id: dto.organizationId } });
+    // Phase 10: the organization is resolved server-side from the tenant's
+    // standing customer-join link/code — never from a client-supplied
+    // organizationId (see RegisterCustomerDto's doc comment). Throws the
+    // same generic "invalid or revoked" error a mistyped/guessed token would.
+    const organizationId = await this.customerJoin.resolveOrganizationIdByToken(dto.joinToken);
+    const organization = await this.prisma.organization.findUnique({ where: { id: organizationId } });
     if (!organization) {
       throw new NotFoundException('Organization not found');
     }
@@ -205,7 +216,7 @@ export class AuthService {
       throw err;
     }
 
-    await this.mail.sendOtpEmail(email, otp);
+    await this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim(), organizationName: organization.name });
 
     return {
       message: 'Registration successful. Please check your email for a verification code.',
@@ -475,6 +486,51 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException();
     }
+    return toPublicUser(user);
+  }
+
+  /**
+   * Self-service password change. Requires proving possession of the
+   * current password (never trusts an authenticated session alone) —
+   * `authContext.userId` is the only source of *which* account this is, so
+   * a caller can never target another user's password. Invalidates the
+   * existing refresh token the same way resetPassword does, forcing
+   * re-login on any other device/session.
+   */
+  async changePassword(authContext: RpcAuthContext, dto: ChangePasswordDto): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { id: authContext.userId } });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    const currentValid = await argon2.verify(user.passwordHash, dto.currentPassword);
+    if (!currentValid) {
+      throw new BadRequestException('The current password you entered is incorrect.');
+    }
+
+    const passwordHash = await argon2.hash(dto.newPassword);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, refreshTokenHash: null },
+    });
+
+    return { message: 'Password changed successfully.' };
+  }
+
+  /**
+   * Self-service profile edit. Deliberately scoped to what UpdateProfileDto
+   * allows (name, avatarUrl) — never email/role/organizationId, mirroring
+   * every other "can only edit their own, limited slice of data" service in
+   * this codebase (e.g. OrganizationsController.updateOwn).
+   */
+  async updateProfile(authContext: RpcAuthContext, dto: UpdateProfileDto & { avatarUrl?: string }): Promise<PublicUser> {
+    const user = await this.prisma.user.update({
+      where: { id: authContext.userId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
+      },
+    });
     return toPublicUser(user);
   }
 }

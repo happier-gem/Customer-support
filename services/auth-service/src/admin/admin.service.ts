@@ -1,9 +1,13 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Organization, Prisma } from '@prisma/client';
+import { Organization, Prisma, User } from '@prisma/client';
 import {
+  ACCOUNT_STATUSES,
   ADMIN_ORG_DEFAULT_PAGE_SIZE,
   ADMIN_ORG_MAX_PAGE_SIZE,
+  ADMIN_USER_DEFAULT_PAGE_SIZE,
+  ADMIN_USER_MAX_PAGE_SIZE,
   AdminOrganizationDto,
+  AdminUserDto,
   ASSIGNABLE_TEAM_ROLES,
   ORGANIZATION_STATUSES,
   PaginatedResult,
@@ -11,6 +15,7 @@ import {
   PlanLimits,
   PlanType,
   PlatformStatsDto,
+  Role,
   ROLES,
   RpcAuthContext,
   SubscriptionPlanDto,
@@ -25,6 +30,17 @@ export interface AdminOrganizationListQuery {
   plan?: PlanType;
   status?: 'ACTIVE' | 'SUSPENDED';
 }
+
+export interface AdminUserListQuery {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  role?: Role;
+  organizationId?: string;
+  status?: 'ACTIVE' | 'DEACTIVATED';
+}
+
+type UserWithOrganization = User & { organization: Organization };
 
 /** Start of the current UTC calendar month — a platform-wide aggregate has no single organization's timezone to honor, unlike AnalyticsService's per-tenant number. */
 function startOfCurrentUtcMonth(): Date {
@@ -162,6 +178,92 @@ export class AdminService {
       organizations: { total: totalOrgs, active: totalOrgs - suspendedOrgs, suspended: suspendedOrgs },
       plans,
       usage: { ticketsThisMonth, feedbackForms, activeTeamMembers },
+    };
+  }
+
+  /**
+   * Phase 10: cross-tenant user search for the Platform Admin `/users` page.
+   * Unlike every other listing method here (org-scoped or platform-wide
+   * counts), this reads across every organization's users at once — that's
+   * the point of a *platform* admin view — but never returns
+   * passwordHash/OTP hash/attempts/reset-token-hash/refresh-token-hash.
+   */
+  async listUsers(authContext: RpcAuthContext, query: AdminUserListQuery): Promise<PaginatedResult<AdminUserDto>> {
+    this.assertPlatformAdmin(authContext);
+
+    const page = query.page && query.page > 0 ? query.page : 1;
+    const pageSize = query.pageSize && query.pageSize > 0 ? Math.min(query.pageSize, ADMIN_USER_MAX_PAGE_SIZE) : ADMIN_USER_DEFAULT_PAGE_SIZE;
+
+    const where: Prisma.UserWhereInput = {};
+    const search = query.search?.trim();
+    if (search) {
+      where.OR = [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }];
+    }
+    if (query.role) {
+      where.role = query.role;
+    }
+    if (query.organizationId) {
+      where.organizationId = query.organizationId;
+    }
+    if (query.status === ACCOUNT_STATUSES.ACTIVE) {
+      where.isActive = true;
+    } else if (query.status === ACCOUNT_STATUSES.DEACTIVATED) {
+      where.isActive = false;
+    }
+
+    const [total, users] = await this.prisma.$transaction([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        include: { organization: true },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      data: users.map((u) => this.toUserDto(u)),
+      pagination: { page, limit: pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
+    };
+  }
+
+  /**
+   * Toggles a user's own `isActive` flag platform-wide — distinct from
+   * setSuspended above, which holds an entire organization. Never touches
+   * `role` (Step 16: a platform admin must not casually change roles).
+   * PLATFORM_ADMIN itself is a valid target in principle, but this
+   * intentionally does not special-case it further than a normal user —
+   * trusting the calling admin's own judgment, the same way setSuspended
+   * trusts it for organizations.
+   */
+  async setUserActive(authContext: RpcAuthContext, userId: string, isActive: boolean): Promise<AdminUserDto> {
+    this.assertPlatformAdmin(authContext);
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { organization: true } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive, ...(isActive ? {} : { refreshTokenHash: null }) },
+      include: { organization: true },
+    });
+    return this.toUserDto(updated);
+  }
+
+  private toUserDto(user: UserWithOrganization): AdminUserDto {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      organizationId: user.organizationId,
+      organizationName: user.organization.name,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt.toISOString(),
     };
   }
 

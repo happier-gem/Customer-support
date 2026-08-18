@@ -61,13 +61,44 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users         User[]
-  invitations   Invitation[]
-  tickets       Ticket[]
-  feedbackForms FeedbackForm[]
-  notifications Notification[]
+  users            User[]
+  invitations      Invitation[]
+  tickets          Ticket[]
+  feedbackForms    FeedbackForm[]
+  notifications    Notification[]
+  customerJoinLink CustomerJoinLink?
 
   @@map("organizations")
+}
+
+/// Phase 10: a tenant's single standing "join my organization" link for
+/// customers — distinct from Invitation, which is a one-time, email-targeted
+/// staff invite. One row per organization (`organizationId` unique); the
+/// customer-facing app resolves an organization from either `token` (the
+/// link/QR target) or `code` (manually typed), never from a client-supplied
+/// organizationId. Unlike an invitation token or password-reset token, this
+/// value is meant to be *publicly* shared (printed on a poster, embedded in
+/// a QR code) rather than kept secret — it identifies which organization to
+/// join, nothing more, and reveals nothing sensitive on its own — so it is
+/// deliberately stored in plaintext rather than hash-only: a code-based
+/// lookup must be able to recover the same token a link/QR lookup would use,
+/// which a one-way hash would make impossible. Regenerating overwrites
+/// `token`/`code` in place so the previous link/QR/code stops resolving
+/// immediately — no history of old tokens is kept, mirroring the
+/// single-active-invitation-per-email pattern in InvitationsService.issueInvitation.
+model CustomerJoinLink {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  token    String  @unique
+  code     String  @unique
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("customer_join_links")
 }
 
 /// Roles are modeled now so the schema doesn't need to change shape in
@@ -103,15 +134,20 @@ model User {
   /// per issued code (see AuthService.verifyEmail); `emailVerificationOtpLastSentAt`
   /// drives the resend cooldown (see AuthService.resendOtp). Password reset keeps
   /// its own separate link-token flow below — unrelated to registration OTP.
-  emailVerificationOtpHash        String?
-  emailVerificationOtpExpiresAt   DateTime?
-  emailVerificationOtpAttempts    Int       @default(0)
-  emailVerificationOtpLastSentAt  DateTime?
+  emailVerificationOtpHash       String?
+  emailVerificationOtpExpiresAt  DateTime?
+  emailVerificationOtpAttempts   Int       @default(0)
+  emailVerificationOtpLastSentAt DateTime?
 
   refreshTokenHash String?
 
   passwordResetTokenHash String?
   passwordResetExpiresAt DateTime?
+
+  /// Phase 10: optional profile picture, served the same public-static way
+  /// as Organization.logoUrl (non-sensitive display image, uploaded via the
+  /// same multer/disk-storage pattern as the logo upload).
+  avatarUrl String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

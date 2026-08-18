@@ -22,6 +22,7 @@ export interface PublicUser {
   organizationId: string;
   role: Role;
   emailVerified: boolean;
+  avatarUrl: string | null;
 }
 
 /**

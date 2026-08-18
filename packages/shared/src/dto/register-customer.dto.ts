@@ -1,14 +1,20 @@
-import { IsEmail, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 /**
  * Public customer self-signup for an existing organization's support portal
  * (unlike RegisterDto, which creates a brand-new organization owned by a
  * TENANT_OWNER). The created account's role is always CUSTOMER — hardcoded
  * server-side in AuthService.registerCustomer, never client-supplied.
+ *
+ * Phase 10: the organization is resolved server-side from `joinToken` (the
+ * tenant's standing customer-join link, see CustomerJoinService) rather than
+ * a raw client-supplied organizationId — a customer can no longer name an
+ * arbitrary organization to join just by knowing/guessing its database id.
  */
 export class RegisterCustomerDto {
-  @IsUUID()
-  organizationId!: string;
+  @IsString()
+  @MinLength(10)
+  joinToken!: string;
 
   @IsString()
   @MinLength(2)

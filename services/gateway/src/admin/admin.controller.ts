@@ -3,6 +3,8 @@ import {
   ADMIN_PATTERNS,
   AdminOrganizationDto,
   AdminOrganizationQueryDto,
+  AdminUserDto,
+  AdminUserQueryDto,
   PaginatedResult,
   PlanType,
   PlatformStatsDto,
@@ -89,6 +91,32 @@ export class AdminController {
         monthlyTickets: dto.monthlyTickets ?? null,
         feedbackForms: dto.feedbackForms ?? null,
       },
+    });
+  }
+
+  @Get('users')
+  async listUsers(@Query() query: AdminUserQueryDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<PaginatedResult<AdminUserDto>>(ADMIN_PATTERNS.LIST_USERS, {
+      authContext: user,
+      ...query,
+    });
+  }
+
+  @Patch('users/:id/deactivate')
+  async deactivateUser(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<AdminUserDto>(ADMIN_PATTERNS.SET_USER_ACTIVE, {
+      authContext: user,
+      userId: id,
+      isActive: false,
+    });
+  }
+
+  @Patch('users/:id/reactivate')
+  async reactivateUser(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.authGateway.send<AdminUserDto>(ADMIN_PATTERNS.SET_USER_ACTIVE, {
+      authContext: user,
+      userId: id,
+      isActive: true,
     });
   }
 }

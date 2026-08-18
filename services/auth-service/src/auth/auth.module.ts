@@ -5,10 +5,12 @@ import type { StringValue } from 'ms';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { MailModule } from '../mail/mail.module';
+import { CustomerJoinModule } from '../customer-join/customer-join.module';
 
 @Module({
   imports: [
     MailModule,
+    CustomerJoinModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

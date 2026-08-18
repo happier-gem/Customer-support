@@ -10,6 +10,9 @@ import {
   ResendOtpDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  ChangePasswordDto,
+  UpdateProfileDto,
+  RpcAuthContext,
 } from '@app/shared';
 import { RpcExceptionFilter } from '../common/filters/rpc-exception.filter';
 
@@ -67,5 +70,15 @@ export class AuthController {
   @MessagePattern(AUTH_PATTERNS.ME)
   me(@Payload() data: { userId: string }) {
     return this.authService.getById(data.userId);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.CHANGE_PASSWORD)
+  changePassword(@Payload() data: { authContext: RpcAuthContext; dto: ChangePasswordDto }) {
+    return this.authService.changePassword(data.authContext, data.dto);
+  }
+
+  @MessagePattern(AUTH_PATTERNS.UPDATE_PROFILE)
+  updateProfile(@Payload() data: { authContext: RpcAuthContext; dto: UpdateProfileDto & { avatarUrl?: string } }) {
+    return this.authService.updateProfile(data.authContext, data.dto);
   }
 }

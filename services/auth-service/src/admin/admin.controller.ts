@@ -1,7 +1,7 @@
 import { Controller, UseFilters } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ADMIN_PATTERNS, PlanLimits, PlanType, RpcAuthContext } from '@app/shared';
-import { AdminService, AdminOrganizationListQuery } from './admin.service';
+import { AdminService, AdminOrganizationListQuery, AdminUserListQuery } from './admin.service';
 import { RpcExceptionFilter } from '../common/filters/rpc-exception.filter';
 
 @Controller()
@@ -38,5 +38,16 @@ export class AdminController {
   @MessagePattern(ADMIN_PATTERNS.UPDATE_PLAN_LIMITS)
   updatePlanLimits(@Payload() data: { authContext: RpcAuthContext; plan: PlanType; limits: PlanLimits }) {
     return this.admin.updatePlanLimits(data.authContext, data.plan, data.limits);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.LIST_USERS)
+  listUsers(@Payload() data: { authContext: RpcAuthContext } & AdminUserListQuery) {
+    const { authContext, ...query } = data;
+    return this.admin.listUsers(authContext, query);
+  }
+
+  @MessagePattern(ADMIN_PATTERNS.SET_USER_ACTIVE)
+  setUserActive(@Payload() data: { authContext: RpcAuthContext; userId: string; isActive: boolean }) {
+    return this.admin.setUserActive(data.authContext, data.userId, data.isActive);
   }
 }
