@@ -2,23 +2,19 @@
 
 import { useState, type ComponentType } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
-  Bell,
   Building2,
   ChevronsLeft,
   ChevronsRight,
   CreditCard,
   LayoutDashboard,
-  LogOut,
   Menu,
-  ShieldCheck,
-  UserCircle,
   Users,
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { NotificationBell } from "@/components/notification-bell";
+import { AccountMenu } from "@/components/account-menu";
 
 interface NavItem {
   href: string;
@@ -26,18 +22,21 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>;
 }
 
+// No "Notifications" entry: under the current business rules, PLATFORM_ADMIN
+// never receives a notification (every NotificationsService.notify() call
+// site resolves recipients from within a tenant org — TENANT_OWNER/
+// SUPPORT_AGENT — never a platform admin). Showing a bell/nav item that's
+// always empty would be dead UI, not a real feature.
 const ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/organizations", label: "Organizations", icon: Building2 },
   { href: "/users", label: "Users", icon: Users },
   { href: "/plans", label: "Plans", icon: CreditCard },
-  { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -45,11 +44,6 @@ export function Sidebar() {
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);
-  }
-
-  async function handleLogout() {
-    await logout();
-    router.push("/login");
   }
 
   const body = (
@@ -83,48 +77,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-gray-200 p-2">
-        <div className={`mb-1 flex items-center gap-2 px-2 py-2 ${collapsed ? "justify-center" : ""}`}>
-          <NotificationBell />
-          {!collapsed && (
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm text-gray-600">{user.name}</span>
-              <span className="block truncate text-xs text-gray-400">{user.role.replace(/_/g, " ")}</span>
-            </span>
-          )}
-        </div>
-        <Link
-          href="/settings/profile"
-          onClick={() => setMobileOpen(false)}
-          title={collapsed ? "Profile" : undefined}
-          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            isActive("/settings/profile") ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
-          } ${collapsed ? "justify-center" : ""}`}
-        >
-          <UserCircle className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Profile</span>}
-        </Link>
-        <Link
-          href="/settings/security"
-          onClick={() => setMobileOpen(false)}
-          title={collapsed ? "Security" : undefined}
-          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            isActive("/settings/security") ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
-          } ${collapsed ? "justify-center" : ""}`}
-        >
-          <ShieldCheck className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Security</span>}
-        </Link>
-        <button
-          type="button"
-          onClick={handleLogout}
-          title={collapsed ? "Logout" : undefined}
-          className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 ${
-            collapsed ? "justify-center" : ""
-          }`}
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Logout</span>}
-        </button>
+        <AccountMenu user={user} collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
