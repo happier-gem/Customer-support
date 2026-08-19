@@ -193,6 +193,22 @@ export interface FeedbackFormSummary {
   updatedAt: string;
 }
 
+export interface FeedbackQuestion {
+  id: string;
+  formId: string;
+  type: FeedbackQuestionType;
+  label: string;
+  required: boolean;
+  order: number;
+  maxLength: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackFormDetail extends FeedbackFormSummary {
+  questions: FeedbackQuestion[];
+}
+
 export interface FeedbackAnswer {
   id: string;
   questionId: string;
@@ -320,8 +336,67 @@ export const api = {
   listMembers: (accessToken: string) =>
     request<Member[]>("/organizations/me/members", { headers: authHeader(accessToken) }),
 
-  listFeedbackForms: (accessToken: string, params: { page?: number; limit?: number } = {}) =>
+  listFeedbackForms: (accessToken: string, params: { page?: number; limit?: number; category?: FeedbackCategory } = {}) =>
     request<Paginated<FeedbackFormSummary>>(`/feedback/forms${buildQuery(params)}`, { headers: authHeader(accessToken) }),
+
+  createFeedbackForm: (accessToken: string, body: { title: string; description?: string; category?: FeedbackCategory }) =>
+    request<FeedbackFormDetail>("/feedback/forms", {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
+
+  getFeedbackForm: (accessToken: string, id: string) =>
+    request<FeedbackFormDetail>(`/feedback/forms/${encodeURIComponent(id)}`, { headers: authHeader(accessToken) }),
+
+  updateFeedbackForm: (accessToken: string, id: string, body: { title?: string; description?: string; category?: FeedbackCategory }) =>
+    request<FeedbackFormDetail>(`/feedback/forms/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
+
+  updateFeedbackFormStatus: (accessToken: string, id: string, formStatus: FeedbackFormStatus) =>
+    request<FeedbackFormDetail>(`/feedback/forms/${encodeURIComponent(id)}/status`, {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify({ status: formStatus }),
+    }),
+
+  deleteFeedbackForm: (accessToken: string, id: string) =>
+    request<{ message: string }>(`/feedback/forms/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: authHeader(accessToken),
+    }),
+
+  createFeedbackQuestion: (
+    accessToken: string,
+    formId: string,
+    body: { type: FeedbackQuestionType; label: string; required?: boolean; order?: number; maxLength?: number },
+  ) =>
+    request<FeedbackQuestion>(`/feedback/forms/${encodeURIComponent(formId)}/questions`, {
+      method: "POST",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
+
+  updateFeedbackQuestion: (
+    accessToken: string,
+    formId: string,
+    questionId: string,
+    body: { label?: string; required?: boolean; order?: number; maxLength?: number },
+  ) =>
+    request<FeedbackQuestion>(`/feedback/forms/${encodeURIComponent(formId)}/questions/${encodeURIComponent(questionId)}`, {
+      method: "PATCH",
+      headers: authHeader(accessToken),
+      body: JSON.stringify(body),
+    }),
+
+  deleteFeedbackQuestion: (accessToken: string, formId: string, questionId: string) =>
+    request<{ message: string }>(
+      `/feedback/forms/${encodeURIComponent(formId)}/questions/${encodeURIComponent(questionId)}`,
+      { method: "DELETE", headers: authHeader(accessToken) },
+    ),
 
   listFeedbackResponses: (accessToken: string, formId: string, params: { page?: number; limit?: number } = {}) =>
     request<Paginated<FeedbackResponse>>(`/feedback/forms/${encodeURIComponent(formId)}/responses${buildQuery(params)}`, {

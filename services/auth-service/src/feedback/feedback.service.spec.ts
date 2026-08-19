@@ -161,14 +161,23 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
       await expect(service.deleteForm(ownerA, formB.id)).rejects.toThrow(NotFoundException);
     });
 
-    it('5. support agent cannot create a form', async () => {
-      await expect(service.createForm(agentA, { title: 'Agent survey' })).rejects.toThrow(ForbiddenException);
+    it('5. support agent can create a form (staff, same as tenant owner)', async () => {
+      const form = await service.createForm(agentA, { title: 'Agent survey' });
+      expect(form.title).toBe('Agent survey');
     });
 
-    it('support agent cannot update or delete a form', async () => {
+    it('support agent can update and delete their own org’s form', async () => {
       const form = await service.createForm(ownerA, { title: 'Survey' });
-      await expect(service.updateForm(agentA, form.id, { title: 'Changed' })).rejects.toThrow(ForbiddenException);
-      await expect(service.deleteForm(agentA, form.id)).rejects.toThrow(ForbiddenException);
+      const updated = await service.updateForm(agentA, form.id, { title: 'Changed' });
+      expect(updated.title).toBe('Changed');
+      await service.deleteForm(agentA, form.id);
+      await expect(service.getFormById(ownerA, form.id)).rejects.toThrow(NotFoundException);
+    });
+
+    it('support agent cannot manage another tenant’s form', async () => {
+      const formB = await service.createForm(ownerB, { title: 'Org B survey' });
+      await expect(service.updateForm(agentA, formB.id, { title: 'Hijacked' })).rejects.toThrow(NotFoundException);
+      await expect(service.deleteForm(agentA, formB.id)).rejects.toThrow(NotFoundException);
     });
 
     it('6. customer cannot create a form', async () => {

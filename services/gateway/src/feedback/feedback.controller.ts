@@ -46,7 +46,7 @@ export class FeedbackController {
   }
 
   @Post('forms')
-  @Roles(ROLES.TENANT_OWNER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
   async createForm(@Body() dto: CreateFeedbackFormDto, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<FeedbackFormDetailDto>(FEEDBACK_PATTERNS.CREATE_FORM, { ...dto, authContext: user });
   }
@@ -58,7 +58,7 @@ export class FeedbackController {
   }
 
   @Patch('forms/:id')
-  @Roles(ROLES.TENANT_OWNER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
   async updateForm(@Param('id') id: string, @Body() dto: UpdateFeedbackFormDto, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<FeedbackFormDetailDto>(FEEDBACK_PATTERNS.UPDATE_FORM, {
       authContext: user,
@@ -68,7 +68,7 @@ export class FeedbackController {
   }
 
   @Patch('forms/:id/status')
-  @Roles(ROLES.TENANT_OWNER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
   async updateFormStatus(
     @Param('id') id: string,
     @Body() dto: UpdateFeedbackFormStatusDto,
@@ -82,13 +82,13 @@ export class FeedbackController {
   }
 
   @Delete('forms/:id')
-  @Roles(ROLES.TENANT_OWNER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
   async deleteForm(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<{ message: string }>(FEEDBACK_PATTERNS.DELETE_FORM, { authContext: user, formId: id });
   }
 
   @Post('forms/:id/questions')
-  @Roles(ROLES.TENANT_OWNER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
   async createQuestion(
     @Param('id') id: string,
     @Body() dto: CreateFeedbackQuestionDto,
@@ -102,7 +102,7 @@ export class FeedbackController {
   }
 
   @Patch('forms/:id/questions/:questionId')
-  @Roles(ROLES.TENANT_OWNER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
   async updateQuestion(
     @Param('id') id: string,
     @Param('questionId') questionId: string,
@@ -118,7 +118,7 @@ export class FeedbackController {
   }
 
   @Delete('forms/:id/questions/:questionId')
-  @Roles(ROLES.TENANT_OWNER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
   async deleteQuestion(
     @Param('id') id: string,
     @Param('questionId') questionId: string,

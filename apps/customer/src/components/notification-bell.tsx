@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Notification } from "@/lib/api";
 import { useTicketSocket } from "@/lib/use-ticket-socket";
@@ -118,11 +119,9 @@ export function NotificationBell() {
         aria-label="Notifications"
         className="relative rounded-md p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
       >
-        <span aria-hidden className="text-base leading-none">
-          🔔
-        </span>
+        <Bell className="h-5 w-5" aria-hidden />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
+          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[1rem] -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}

@@ -166,8 +166,8 @@ export class FeedbackService {
     authContext: RpcAuthContext,
     dto: { title: string; description?: string; category?: FeedbackCategory },
   ): Promise<FeedbackFormDetailDto> {
-    if (authContext.role !== ROLES.TENANT_OWNER) {
-      throw new ForbiddenException('Only a tenant owner can create a feedback form.');
+    if (authContext.role !== ROLES.TENANT_OWNER && authContext.role !== ROLES.SUPPORT_AGENT) {
+      throw new ForbiddenException('Only a tenant owner or support agent can create a feedback form.');
     }
 
     const form = await this.prisma.$transaction(async (tx) => {
@@ -253,10 +253,10 @@ export class FeedbackService {
     return toFormDetailDto(await this.getAccessibleForm(authContext, formId));
   }
 
-  /** Tenant Owner-only form lookup for mutation endpoints (update/delete/questions). */
+  /** Tenant Owner/Support Agent form lookup for mutation endpoints (update/delete/questions). */
   private async getOwnedForm(authContext: RpcAuthContext, formId: string): Promise<FeedbackForm> {
-    if (authContext.role !== ROLES.TENANT_OWNER) {
-      throw new ForbiddenException('Only a tenant owner can manage feedback forms.');
+    if (authContext.role !== ROLES.TENANT_OWNER && authContext.role !== ROLES.SUPPORT_AGENT) {
+      throw new ForbiddenException('Only a tenant owner or support agent can manage feedback forms.');
     }
 
     const form = await this.prisma.feedbackForm.findFirst({
