@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   Menu,
   MessageSquare,
-  PlusCircle,
   Ticket,
   X,
 } from "lucide-react";
@@ -24,10 +23,13 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>;
 }
 
+// "Create Ticket" was previously its own top-level nav item pointing at
+// /tickets/new — a duplicate entry point, since the Tickets list page (My
+// Tickets) already has its own "New Ticket" button leading to the same
+// route. One ticket-creation workflow, reached from one place: Tickets.
 const ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tickets", label: "My Tickets", icon: Ticket },
-  { href: "/tickets/new", label: "Create Ticket", icon: PlusCircle },
   { href: "/feedback", label: "Feedback", icon: MessageSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];

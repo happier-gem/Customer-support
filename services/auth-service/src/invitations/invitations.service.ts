@@ -98,7 +98,11 @@ export class InvitationsService {
     });
 
     const inviteUrl = `${this.config.get<string>('FRONTEND_URL')}/invite/accept?token=${token}`;
-    await this.mail.sendInvitationEmail(normalizedEmail, organization.name, role, inviteUrl);
+    // Fire-and-forget — MailService.sendMail() never rejects (best-effort
+    // side channel, errors are logged internally), so awaiting it here would
+    // only risk this RPC response exceeding the gateway's fixed
+    // CALL_TIMEOUT_MS on a slow SMTP round-trip, for zero correctness benefit.
+    void this.mail.sendInvitationEmail(normalizedEmail, organization.name, role, inviteUrl);
 
     return { ...toDto(invitation), inviteUrl };
   }

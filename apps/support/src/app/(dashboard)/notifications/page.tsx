@@ -16,9 +16,10 @@ function relativeTime(iso: string): string {
   return `${Math.floor(diffHr / 24)}d ago`;
 }
 
+// Feedback is tenant-owner-only, so a support agent never receives a
+// FEEDBACK_SUBMITTED notification in the first place — no feedback route here.
 function notificationHref(n: Notification): string | null {
   if (n.ticketId) return `/tickets/${n.ticketId}`;
-  if (n.feedbackFormId) return `/feedback/${n.feedbackFormId}`;
   return null;
 }
 

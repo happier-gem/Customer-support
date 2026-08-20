@@ -37,7 +37,7 @@ export class FeedbackController {
   constructor(private readonly authGateway: AuthGatewayService) {}
 
   @Get('forms')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT, ROLES.CUSTOMER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.CUSTOMER)
   async listForms(@Query() query: FeedbackFormQueryDto, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<PaginatedResult<FeedbackFormSummaryDto>>(FEEDBACK_PATTERNS.LIST_FORMS, {
       authContext: user,
@@ -46,19 +46,19 @@ export class FeedbackController {
   }
 
   @Post('forms')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
+  @Roles(ROLES.TENANT_OWNER)
   async createForm(@Body() dto: CreateFeedbackFormDto, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<FeedbackFormDetailDto>(FEEDBACK_PATTERNS.CREATE_FORM, { ...dto, authContext: user });
   }
 
   @Get('forms/:id')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT, ROLES.CUSTOMER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.CUSTOMER)
   async getForm(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<FeedbackFormDetailDto>(FEEDBACK_PATTERNS.GET_FORM, { authContext: user, formId: id });
   }
 
   @Patch('forms/:id')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
+  @Roles(ROLES.TENANT_OWNER)
   async updateForm(@Param('id') id: string, @Body() dto: UpdateFeedbackFormDto, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<FeedbackFormDetailDto>(FEEDBACK_PATTERNS.UPDATE_FORM, {
       authContext: user,
@@ -68,7 +68,7 @@ export class FeedbackController {
   }
 
   @Patch('forms/:id/status')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
+  @Roles(ROLES.TENANT_OWNER)
   async updateFormStatus(
     @Param('id') id: string,
     @Body() dto: UpdateFeedbackFormStatusDto,
@@ -82,13 +82,13 @@ export class FeedbackController {
   }
 
   @Delete('forms/:id')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
+  @Roles(ROLES.TENANT_OWNER)
   async deleteForm(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<{ message: string }>(FEEDBACK_PATTERNS.DELETE_FORM, { authContext: user, formId: id });
   }
 
   @Post('forms/:id/questions')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
+  @Roles(ROLES.TENANT_OWNER)
   async createQuestion(
     @Param('id') id: string,
     @Body() dto: CreateFeedbackQuestionDto,
@@ -102,7 +102,7 @@ export class FeedbackController {
   }
 
   @Patch('forms/:id/questions/:questionId')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
+  @Roles(ROLES.TENANT_OWNER)
   async updateQuestion(
     @Param('id') id: string,
     @Param('questionId') questionId: string,
@@ -118,7 +118,7 @@ export class FeedbackController {
   }
 
   @Delete('forms/:id/questions/:questionId')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
+  @Roles(ROLES.TENANT_OWNER)
   async deleteQuestion(
     @Param('id') id: string,
     @Param('questionId') questionId: string,
@@ -146,7 +146,7 @@ export class FeedbackController {
   }
 
   @Get('forms/:id/responses')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT)
+  @Roles(ROLES.TENANT_OWNER)
   async listResponses(
     @Param('id') id: string,
     @Query() query: FeedbackResponseQueryDto,
@@ -160,7 +160,7 @@ export class FeedbackController {
   }
 
   @Get('responses/:id')
-  @Roles(ROLES.TENANT_OWNER, ROLES.SUPPORT_AGENT, ROLES.CUSTOMER)
+  @Roles(ROLES.TENANT_OWNER, ROLES.CUSTOMER)
   async getResponse(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.authGateway.send<FeedbackResponseDto>(FEEDBACK_PATTERNS.GET_RESPONSE, {
       authContext: user,

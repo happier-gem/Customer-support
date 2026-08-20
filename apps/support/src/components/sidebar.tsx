@@ -9,7 +9,6 @@ import {
   ChevronsRight,
   LayoutDashboard,
   Menu,
-  MessageSquare,
   Ticket,
   UserCheck,
   X,
@@ -24,11 +23,13 @@ interface NavItem {
   icon: ComponentType<{ className?: string }>;
 }
 
+// No "Feedback" entry: feedback forms are tenant-owner-only — support
+// agents have no feedback access at all (neither creating/managing forms
+// nor viewing responses), enforced server-side in FeedbackService.
 const ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tickets", label: "Tickets", icon: Ticket },
   { href: "/tickets?assignee=me", label: "Assigned Tickets", icon: UserCheck },
-  { href: "/feedback", label: "Feedback", icon: MessageSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 

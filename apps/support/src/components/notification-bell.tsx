@@ -19,10 +19,15 @@ function relativeTime(iso: string): string {
   return `${Math.floor(diffHr / 24)}d ago`;
 }
 
-/** Only routes that exist in this app — a support agent has no team-management page, so a role-change/removal notification is left un-clickable. */
+/**
+ * Only routes that exist in this app — a support agent has no
+ * team-management page, so a role-change/removal notification is left
+ * un-clickable. Feedback is tenant-owner-only, so a support agent never
+ * actually receives a FEEDBACK_SUBMITTED notification in the first place
+ * (see FeedbackService's notify-staff query) — no feedback route here either.
+ */
 function notificationHref(n: Notification): string | null {
   if (n.ticketId) return `/tickets/${n.ticketId}`;
-  if (n.feedbackFormId) return `/feedback/${n.feedbackFormId}`;
   return null;
 }
 

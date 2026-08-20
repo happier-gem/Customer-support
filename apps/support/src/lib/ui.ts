@@ -18,9 +18,6 @@ export const selectClass =
 export const secondaryButtonClass =
   "rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
 
-export const dangerButtonClass =
-  "rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50";
-
 export const cardClass = "rounded-xl border border-gray-200 bg-white p-6 shadow-sm";
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {

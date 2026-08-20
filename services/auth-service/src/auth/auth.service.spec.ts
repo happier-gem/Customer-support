@@ -74,7 +74,14 @@ describe('AuthService (integration)', () => {
     const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
     const dto = { ...baseRegisterDto, ...overrides };
     const result = await authService.register(dto);
-    const otp = sendSpy.mock.calls[0][1];
+    // Registration's email send is fire-and-forget (not awaited by
+    // register() itself — see auth.service.ts), so give its microtask a
+    // tick to run before reading the spy.
+    await new Promise((resolve) => setImmediate(resolve));
+    // The last call, not the first: a test that calls this helper more than
+    // once against the same still-unverified email (re-registration) reuses
+    // the same spy instance, so earlier calls remain in `.mock.calls`.
+    const otp = sendSpy.mock.calls.at(-1)![1];
     return { result, otp, dto };
   }
 
@@ -108,8 +115,8 @@ describe('AuthService (integration)', () => {
       await expect(argon2.verify(user!.passwordHash, baseRegisterDto.password)).resolves.toBe(true);
     });
 
-    it('rejects duplicate email registration with a 409 and does not create a second org/user', async () => {
-      await registerAndGetOtp();
+    it('rejects re-registration of an already-verified email with a 409 and does not create a second org/user', async () => {
+      await registerVerifyAndLogin();
 
       await expect(registerAndGetOtp()).rejects.toThrow(ConflictException);
 
@@ -117,6 +124,52 @@ describe('AuthService (integration)', () => {
       const orgs = await prisma.organization.findMany({});
       expect(users).toHaveLength(1);
       expect(orgs).toHaveLength(1);
+    });
+
+    it('re-registering an *unverified* email never creates a second account (immediate retry, still within the resend cooldown)', async () => {
+      const { result: firstResult, otp: firstOtp } = await registerAndGetOtp();
+
+      // Immediately re-submitting registration is indistinguishable from an
+      // accidental double-submit — same account, and since it's within the
+      // resend cooldown, the original still-valid code is left untouched
+      // rather than rotated (mirrors resendOtp's own cooldown behavior).
+      const { result: secondResult } = await registerAndGetOtp();
+
+      expect(secondResult.userId).toBe(firstResult.userId);
+      expect(secondResult.organizationId).toBe(firstResult.organizationId);
+      const users = await prisma.user.findMany({ where: { email: baseRegisterDto.email } });
+      const orgs = await prisma.organization.findMany({});
+      expect(users).toHaveLength(1);
+      expect(orgs).toHaveLength(1);
+
+      await expect(authService.verifyEmail({ email: baseRegisterDto.email, otp: firstOtp })).resolves.toBeDefined();
+    });
+
+    it('re-registering an *unverified* email after the resend cooldown has elapsed issues a fresh OTP that invalidates the old one', async () => {
+      const { result: firstResult, otp: firstOtp } = await registerAndGetOtp();
+
+      // Simulate the cooldown having elapsed, the same way the resendOtp
+      // cooldown test does.
+      await prisma.user.update({
+        where: { id: firstResult.userId },
+        data: { emailVerificationOtpLastSentAt: new Date(Date.now() - 61_000) },
+      });
+
+      const { result: secondResult, otp: secondOtp } = await registerAndGetOtp();
+
+      expect(secondResult.userId).toBe(firstResult.userId);
+      const users = await prisma.user.findMany({ where: { email: baseRegisterDto.email } });
+      expect(users).toHaveLength(1);
+
+      expect(secondOtp).not.toBe(firstOtp);
+      await expect(authService.verifyEmail({ email: baseRegisterDto.email, otp: firstOtp })).rejects.toThrow(BadRequestException);
+      await expect(authService.verifyEmail({ email: baseRegisterDto.email, otp: secondOtp })).resolves.toBeDefined();
+    });
+
+    it('rejects a verified-account re-registration attempt without needing a second call — the account stays usable', async () => {
+      await registerVerifyAndLogin();
+      await expect(registerAndGetOtp()).rejects.toThrow(ConflictException);
+      await expect(authService.login({ email: baseRegisterDto.email, password: baseRegisterDto.password })).resolves.toBeDefined();
     });
 
     it('never stores the OTP in plaintext', async () => {
@@ -195,6 +248,49 @@ describe('AuthService (integration)', () => {
       });
 
       expect(result.organizationId).toBe(orgBeta.id);
+    });
+
+    it('re-registering the same unverified customer email for the SAME organization does not create a second account', async () => {
+      const { org, joinToken } = await makeOwnerAndJoinToken();
+      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+
+      const first = await authService.registerCustomer({ joinToken, name: 'Casey', email: 'retry@beta.test', password: 'CustomerPass123' });
+      const second = await authService.registerCustomer({ joinToken, name: 'Casey', email: 'retry@beta.test', password: 'CustomerPass123' });
+
+      expect(second.userId).toBe(first.userId);
+      expect(second.organizationId).toBe(org.id);
+      const users = await prisma.user.findMany({ where: { email: 'retry@beta.test' } });
+      expect(users).toHaveLength(1);
+    });
+
+    it('rejects re-registering the same unverified customer email under a DIFFERENT organization’s join token', async () => {
+      const { joinToken: betaToken } = await makeOwnerAndJoinToken('Beta Inc');
+      const { joinToken: deltaToken } = await makeOwnerAndJoinToken('Delta Co');
+      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+
+      await authService.registerCustomer({ joinToken: betaToken, name: 'Casey', email: 'cross-org@test.dev', password: 'CustomerPass123' });
+
+      await expect(
+        authService.registerCustomer({ joinToken: deltaToken, name: 'Casey', email: 'cross-org@test.dev', password: 'CustomerPass123' }),
+      ).rejects.toThrow(ConflictException);
+
+      // Still only ever associated with the original organization.
+      const user = await prisma.user.findUnique({ where: { email: 'cross-org@test.dev' } });
+      const betaOrg = await prisma.customerJoinLink.findUnique({ where: { token: betaToken } });
+      expect(user?.organizationId).toBe(betaOrg?.organizationId);
+    });
+
+    it('rejects re-registration once the customer account is verified', async () => {
+      const { joinToken } = await makeOwnerAndJoinToken();
+      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+
+      await authService.registerCustomer({ joinToken, name: 'Casey', email: 'verified-customer@test.dev', password: 'CustomerPass123' });
+      const otp = sendSpy.mock.calls.at(-1)![1];
+      await authService.verifyEmail({ email: 'verified-customer@test.dev', otp });
+
+      await expect(
+        authService.registerCustomer({ joinToken, name: 'Casey', email: 'verified-customer@test.dev', password: 'CustomerPass123' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 

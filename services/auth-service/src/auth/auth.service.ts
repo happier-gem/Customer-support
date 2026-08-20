@@ -111,7 +111,17 @@ export class AuthService {
 
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictException('An account with this email already exists');
+      if (existing.emailVerified) {
+        throw new ConflictException('An account with this email already exists. Please log in instead.');
+      }
+      // Recovery flow: a previous registration attempt already created this
+      // account but it was never verified. The unique email constraint means
+      // we can never create a second row for it anyway — so instead of a
+      // blanket 409, re-issue a fresh OTP for the *same* account and route
+      // the caller through the exact same success path a brand-new
+      // registration takes (see RegisterPage: any non-throwing response
+      // redirects to /verify-email).
+      return this.reissueRegistrationOtp(existing);
     }
 
     const passwordHash = await argon2.hash(dto.password);
@@ -154,12 +164,56 @@ export class AuthService {
       throw err;
     }
 
-    await this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim() });
+    // Fire-and-forget: MailService.sendMail() never rejects — it's already a
+    // best-effort side channel that swallows and logs its own errors (see
+    // mail.service.ts) — so awaiting it here buys no correctness and only
+    // risks this RPC response exceeding the gateway's fixed CALL_TIMEOUT_MS
+    // (8s, see auth-gateway.service.ts) on a slow SMTP round-trip. The
+    // account is already committed above regardless of how long the email
+    // takes to actually leave.
+    void this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim() });
 
     return {
       message: 'Registration successful. Please check your email for a verification code.',
       organizationId,
       userId,
+    };
+  }
+
+  /**
+   * Shared by register()/registerCustomer() when the email already belongs
+   * to an unverified account: re-issues a fresh OTP for that *same* account
+   * (never creates a second row) and returns the identical response shape a
+   * fresh registration would, so callers can redirect to /verify-email
+   * without special-casing this path. Respects the same resend cooldown as
+   * resendOtp() so retried registration submissions can't be used to spam
+   * the mailbox.
+   */
+  private async reissueRegistrationOtp(user: User): Promise<{ message: string; organizationId: string; userId: string }> {
+    const now = new Date();
+    const withinCooldown =
+      user.emailVerificationOtpLastSentAt &&
+      (now.getTime() - user.emailVerificationOtpLastSentAt.getTime()) / 1000 < OTP_RESEND_COOLDOWN_SECONDS;
+
+    if (!withinCooldown) {
+      const otp = generateOtp();
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerificationOtpHash: hashToken(otp),
+          emailVerificationOtpExpiresAt: new Date(now.getTime() + OTP_EXPIRES_IN_MINUTES * 60_000),
+          emailVerificationOtpAttempts: 0,
+          emailVerificationOtpLastSentAt: now,
+        },
+      });
+      void this.mail.sendOtpEmail(user.email, otp, { recipientName: user.name });
+    }
+
+    return {
+      message:
+        'An account with this email already exists but has not been verified. We have sent a new verification code.',
+      organizationId: user.organizationId,
+      userId: user.id,
     };
   }
 
@@ -184,7 +238,18 @@ export class AuthService {
 
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictException('An account with this email already exists');
+      if (existing.emailVerified) {
+        throw new ConflictException('An account with this email already exists. Please log in instead.');
+      }
+      if (existing.organizationId !== organizationId) {
+        // Never silently move an unverified account to a different
+        // organization just because this attempt used a different join
+        // link/code — that would be exactly the cross-tenant reassignment
+        // Step 7 forbids, just triggered via the recovery path instead of
+        // a spoofed organizationId.
+        throw new ConflictException('An account with this email already exists for a different organization.');
+      }
+      return this.reissueRegistrationOtp(existing);
     }
 
     const passwordHash = await argon2.hash(dto.password);
@@ -216,7 +281,8 @@ export class AuthService {
       throw err;
     }
 
-    await this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim(), organizationName: organization.name });
+    // Fire-and-forget — see the identical comment in register() above.
+    void this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim(), organizationName: organization.name });
 
     return {
       message: 'Registration successful. Please check your email for a verification code.',
@@ -320,7 +386,7 @@ export class AuthService {
         emailVerificationOtpLastSentAt: now,
       },
     });
-    await this.mail.sendOtpEmail(email, otp);
+    void this.mail.sendOtpEmail(email, otp);
 
     return { message: GENERIC_RESEND_MESSAGE };
   }
@@ -339,7 +405,10 @@ export class AuthService {
     }
 
     if (!user.emailVerified) {
-      throw new ForbiddenException('Please verify your email before logging in.');
+      // Machine-readable `code` (mirroring the OTP_* error shape used
+      // elsewhere) so the frontend can reliably show a "Verify email" /
+      // "Resend code" action instead of just displaying the message text.
+      throw new ForbiddenException({ message: 'Please verify your email before logging in.', code: 'EMAIL_NOT_VERIFIED' });
     }
 
     if (!user.isActive) {
@@ -443,7 +512,7 @@ export class AuthService {
       });
 
       const resetUrl = `${this.config.get<string>('FRONTEND_URL')}/reset-password?token=${resetToken}`;
-      await this.mail.sendPasswordResetEmail(email, resetUrl);
+      void this.mail.sendPasswordResetEmail(email, resetUrl);
     }
 
     return { message: GENERIC_FORGOT_PASSWORD_MESSAGE };

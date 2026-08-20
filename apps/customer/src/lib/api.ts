@@ -4,6 +4,9 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
+    /** Machine-readable error code, e.g. "EMAIL_NOT_VERIFIED" or "OTP_EXPIRED". */
+    public code?: string,
+    public data?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -26,7 +29,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const message = Array.isArray(data?.message) ? data.message.join(", ") : (data?.message ?? "Something went wrong. Please try again.");
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, data?.code, data?.data);
   }
 
   return data as T;
