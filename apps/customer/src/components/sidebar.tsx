@@ -18,6 +18,7 @@ import { useOrganization } from "@/lib/organization-context";
 import { API_BASE } from "@/lib/api";
 import { getInitials } from "@/lib/ui";
 import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { AccountMenu } from "@/components/account-menu";
 
 interface NavItem {
@@ -107,7 +108,7 @@ export function Sidebar() {
           type="button"
           onClick={() => setCollapsed((c) => !c)}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="mt-1 hidden w-full items-center justify-center rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:flex"
+          className="mt-1 hidden w-full items-center justify-center rounded-md px-3 py-2 text-foreground/60 transition-colors hover:bg-muted hover:text-foreground md:flex"
         >
           {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
         </button>
@@ -122,12 +123,13 @@ export function Sidebar() {
           {orgName}
         </span>
         <div className="flex items-center gap-1">
+          <ThemeToggle />
           <NotificationBell />
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
-            className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+            className="rounded-md p-2 text-foreground/60 hover:bg-muted hover:text-foreground"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -143,7 +145,7 @@ export function Sidebar() {
                 type="button"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close menu"
-                className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+                className="rounded-md p-2 text-foreground/60 hover:bg-muted hover:text-foreground"
               >
                 <X className="h-5 w-5" />
               </button>

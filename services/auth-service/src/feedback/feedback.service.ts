@@ -545,7 +545,7 @@ export class FeedbackService {
         type: NOTIFICATION_TYPES.FEEDBACK_SUBMITTED,
         title: 'New feedback submitted',
         message: `New feedback was submitted for "${form.title}".`,
-        feedbackFormId: response.id,
+        feedbackFormId: form.id,
       });
 
       return tx.feedbackResponse.findUniqueOrThrow({ where: { id: response.id }, include: RESPONSE_INCLUDE });

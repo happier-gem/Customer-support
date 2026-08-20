@@ -54,8 +54,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Follows the OS preference by default, unless the user has explicitly picked "light" via the theme toggle (data-theme="light" persisted in localStorage). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #0b0f1a;
     --foreground: #e2e8f0;
     --card: #131826;
@@ -80,6 +81,33 @@
     --info: #3b82f6;
     --info-foreground: #ffffff;
   }
+}
+
+/* Explicit "dark" choice via the theme toggle — wins regardless of OS preference. */
+:root[data-theme="dark"] {
+  --background: #0b0f1a;
+  --foreground: #e2e8f0;
+  --card: #131826;
+  --card-foreground: #e2e8f0;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #1e2436;
+  --secondary-foreground: #c7d2fe;
+  --muted: #1a2030;
+  --muted-foreground: #94a3b8;
+  --accent: #1e2436;
+  --accent-foreground: #c7d2fe;
+  --border: #263047;
+  --input: #334155;
+  --ring: #818cf8;
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #ffffff;
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+  --info: #3b82f6;
+  --info-foreground: #ffffff;
 }
 
 body {

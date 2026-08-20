@@ -119,7 +119,7 @@ export function NotificationBell() {
       <button
         onClick={toggleOpen}
         aria-label="Notifications"
-        className="relative rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="relative rounded-md p-2 text-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
       >
         <Bell className="h-5 w-5" aria-hidden />
         {unreadCount > 0 && (
