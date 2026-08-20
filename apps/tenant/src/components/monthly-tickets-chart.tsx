@@ -37,16 +37,16 @@ export function MonthlyTicketsChart({ data }: { data: MonthlyTicketCount[] }) {
               onMouseLeave={() => setHovered(null)}
             >
               {isHovered && (
-                <div className="absolute -top-7 z-10 whitespace-nowrap rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white shadow-sm">
+                <div className="absolute -top-7 z-10 whitespace-nowrap rounded-md bg-primary px-2 py-1 text-xs font-medium text-white shadow-sm">
                   {d.month}: {d.count}
                 </div>
               )}
-              <span className="mb-1 text-xs font-medium text-gray-600">{d.count}</span>
+              <span className="mb-1 text-xs font-medium text-muted-foreground">{d.count}</span>
               <div
-                className={`w-full rounded-t-sm transition-colors ${isHovered ? "bg-blue-700" : "bg-blue-600"}`}
+                className={`w-full rounded-t-sm transition-colors ${isHovered ? "bg-info/90" : "bg-info"}`}
                 style={{ height: `${Math.max(heightPct, d.count > 0 ? 3 : 0)}%`, minHeight: d.count > 0 ? 2 : 0 }}
               />
-              <div className="mt-2 border-t border-gray-200 pt-1 text-xs text-gray-500">{monthLabel(d.month)}</div>
+              <div className="mt-2 border-t border-border pt-1 text-xs text-muted-foreground">{monthLabel(d.month)}</div>
             </div>
           );
         })}

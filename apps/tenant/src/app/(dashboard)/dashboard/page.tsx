@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useOrganization } from "@/lib/organization-context";
 import { api, ApiError, type Member, type Paginated, type Subscription, type Ticket, type TicketStatus } from "@/lib/api";
 import { cardClass, errorTextClass, formatStatusLabel, priorityBadgeClass, statusBadgeClass } from "@/lib/ui";
 
@@ -12,8 +13,8 @@ const OPEN_STATUSES: TicketStatus[] = ["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTO
 function StatTile({ label, value }: { label: string; value: number | string }) {
   return (
     <div className={cardClass}>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }
@@ -21,6 +22,7 @@ function StatTile({ label, value }: { label: string; value: number | string }) {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, accessToken, status } = useAuth();
+  const { organization } = useOrganization();
 
   const [recent, setRecent] = useState<Paginated<Ticket> | null>(null);
   const [openCount, setOpenCount] = useState<number | null>(null);
@@ -64,15 +66,18 @@ export default function DashboardPage() {
 
   if (status === "loading" || !user) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-4 py-8">
-      <h1 className="text-xl font-semibold text-gray-900">Welcome, {user.name}</h1>
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">Welcome, {user.name}</h1>
+        {organization && <p className="text-sm text-muted-foreground">{organization.name}</p>}
+      </div>
 
       {error && <p className={errorTextClass}>{error}</p>}
 
@@ -86,23 +91,23 @@ export default function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className={`${cardClass} lg:col-span-2`}>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">Recent tickets</h2>
-            <Link href="/tickets" className="text-sm font-medium text-gray-500 hover:text-gray-900">
+            <h2 className="text-sm font-semibold text-foreground">Recent tickets</h2>
+            <Link href="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground">
               View all
             </Link>
           </div>
           {loading ? (
-            <p className="text-sm text-gray-500">Loading…</p>
+            <p className="text-sm text-muted-foreground">Loading…</p>
           ) : !recent || recent.data.length === 0 ? (
-            <p className="text-sm text-gray-500">No tickets yet.</p>
+            <p className="text-sm text-muted-foreground">No tickets yet.</p>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-border">
               {recent.data.map((ticket) => (
                 <li key={ticket.id}>
-                  <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-gray-50">
+                  <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-muted">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-gray-900">{ticket.title}</p>
-                      <p className="text-xs text-gray-500">{ticket.customer.name}</p>
+                      <p className="truncate text-sm font-medium text-foreground">{ticket.title}</p>
+                      <p className="text-xs text-muted-foreground">{ticket.customer.name}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
@@ -118,58 +123,58 @@ export default function DashboardPage() {
         <div className="space-y-4">
           {isOwner && subscription && (
             <div className={cardClass}>
-              <h2 className="mb-3 text-sm font-semibold text-gray-900">Subscription usage</h2>
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Subscription usage</h2>
               <dl className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <dt className="text-gray-500">Team members</dt>
-                  <dd className="text-gray-900">
+                  <dt className="text-muted-foreground">Team members</dt>
+                  <dd className="text-foreground">
                     {subscription.usage.teamMembers}
                     {subscription.limits.teamMembers !== null ? ` / ${subscription.limits.teamMembers}` : ""}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-gray-500">Tickets this month</dt>
-                  <dd className="text-gray-900">
+                  <dt className="text-muted-foreground">Tickets this month</dt>
+                  <dd className="text-foreground">
                     {subscription.usage.monthlyTickets}
                     {subscription.limits.monthlyTickets !== null ? ` / ${subscription.limits.monthlyTickets}` : ""}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-gray-500">Questionnaires</dt>
-                  <dd className="text-gray-900">
+                  <dt className="text-muted-foreground">Questionnaires</dt>
+                  <dd className="text-foreground">
                     {subscription.usage.feedbackForms}
                     {subscription.limits.feedbackForms !== null ? ` / ${subscription.limits.feedbackForms}` : ""}
                   </dd>
                 </div>
               </dl>
-              <Link href="/settings/subscription" className="mt-3 block text-sm font-medium text-gray-500 hover:text-gray-900">
+              <Link href="/settings/subscription" className="mt-3 block text-sm font-medium text-muted-foreground hover:text-foreground">
                 Manage subscription →
               </Link>
             </div>
           )}
 
           <div className={cardClass}>
-            <h2 className="mb-3 text-sm font-semibold text-gray-900">Quick links</h2>
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Quick links</h2>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/feedback" className="font-medium text-gray-700 hover:text-gray-900">
+                <Link href="/feedback" className="font-medium text-foreground hover:text-foreground">
                   Questionnaires
                 </Link>
               </li>
               <li>
-                <Link href="/analytics" className="font-medium text-gray-700 hover:text-gray-900">
+                <Link href="/analytics" className="font-medium text-foreground hover:text-foreground">
                   Analytics
                 </Link>
               </li>
               {isOwner && (
                 <>
                   <li>
-                    <Link href="/settings/team" className="font-medium text-gray-700 hover:text-gray-900">
+                    <Link href="/settings/team" className="font-medium text-foreground hover:text-foreground">
                       Team members
                     </Link>
                   </li>
                   <li>
-                    <Link href="/settings/customer-access" className="font-medium text-gray-700 hover:text-gray-900">
+                    <Link href="/settings/customer-access" className="font-medium text-foreground hover:text-foreground">
                       Customer access
                     </Link>
                   </li>

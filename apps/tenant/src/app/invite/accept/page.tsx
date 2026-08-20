@@ -74,7 +74,7 @@ function AcceptInvitationContent() {
   if (state === "loading") {
     return (
       <AuthCard title="Loading invitation" subtitle="This will just take a moment.">
-        <p className="text-center text-sm text-gray-500">Checking your invitation…</p>
+        <p className="text-center text-sm text-muted-foreground">Checking your invitation…</p>
       </AuthCard>
     );
   }
@@ -109,7 +109,7 @@ function AcceptInvitationContent() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className={labelClass}>Email</label>
-          <input type="email" value={invitation?.email ?? ""} disabled className={`${inputClass} bg-gray-50 text-gray-500`} />
+          <input type="email" value={invitation?.email ?? ""} disabled className={`${inputClass} bg-muted text-muted-foreground`} />
         </div>
         <div>
           <label htmlFor="name" className={labelClass}>

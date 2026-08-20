@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useOrganization } from "@/lib/organization-context";
 import { api, ApiError, type Paginated, type Ticket, type TicketStatus } from "@/lib/api";
 import {
   buttonClass,
@@ -19,6 +20,7 @@ const OPEN_STATUSES: TicketStatus[] = ["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTO
 export default function DashboardPage() {
   const router = useRouter();
   const { user, accessToken, status } = useAuth();
+  const { organization } = useOrganization();
 
   const [recent, setRecent] = useState<Paginated<Ticket> | null>(null);
   const [openCount, setOpenCount] = useState<number | null>(null);
@@ -56,7 +58,7 @@ export default function DashboardPage() {
   if (status === "loading" || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
@@ -64,7 +66,10 @@ export default function DashboardPage() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 space-y-6 px-4 py-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Welcome, {user.name}</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Welcome, {user.name}</h1>
+          {organization && <p className="text-sm text-muted-foreground">{organization.name}</p>}
+        </div>
         <Link href="/tickets/new" className={`${buttonClass} w-auto! px-4`}>
           Create Ticket
         </Link>
@@ -74,34 +79,34 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className={cardClass}>
-          <p className="text-sm text-gray-500">Open tickets</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{loading ? "…" : (openCount ?? 0)}</p>
+          <p className="text-sm text-muted-foreground">Open tickets</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{loading ? "…" : (openCount ?? 0)}</p>
         </div>
         <div className={cardClass}>
-          <p className="text-sm text-gray-500">Total tickets</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{loading ? "…" : (recent?.pagination.total ?? 0)}</p>
+          <p className="text-sm text-muted-foreground">Total tickets</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{loading ? "…" : (recent?.pagination.total ?? 0)}</p>
         </div>
       </div>
 
       <div className={cardClass}>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Recent tickets</h2>
-          <Link href="/tickets" className="text-sm font-medium text-gray-500 hover:text-gray-900">
+          <h2 className="text-sm font-semibold text-foreground">Recent tickets</h2>
+          <Link href="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground">
             View all
           </Link>
         </div>
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !recent || recent.data.length === 0 ? (
-          <p className="text-sm text-gray-500">No tickets yet. Create your first ticket to get started.</p>
+          <p className="text-sm text-muted-foreground">No tickets yet. Create your first ticket to get started.</p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-border">
             {recent.data.map((ticket) => (
               <li key={ticket.id}>
-                <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-gray-50">
+                <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-muted">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900">{ticket.title}</p>
-                    <p className="text-xs text-gray-500">Opened {new Date(ticket.createdAt).toLocaleDateString()}</p>
+                    <p className="truncate text-sm font-medium text-foreground">{ticket.title}</p>
+                    <p className="text-xs text-muted-foreground">Opened {new Date(ticket.createdAt).toLocaleDateString()}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>

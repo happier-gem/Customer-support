@@ -75,7 +75,7 @@ export default function LoginPage() {
             <label htmlFor="password" className={labelClass}>
               Password
             </label>
-            <Link href="/forgot-password" className="mb-1 text-xs text-gray-500 hover:text-gray-700">
+            <Link href="/forgot-password" className="mb-1 text-xs text-muted-foreground hover:text-foreground">
               Forgot password?
             </Link>
           </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
         </div>
         {error && <p className={errorTextClass}>{error}</p>}
         {unverifiedEmail && (
-          <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3">
+          <div className="space-y-3 rounded-md border border-warning/30 bg-warning/10 p-3">
             <p className="text-sm text-amber-800">Your email has not been verified yet.</p>
             <div className="flex flex-wrap gap-2">
               <Link
@@ -113,7 +113,7 @@ export default function LoginPage() {
           {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>
-      <p className="text-center text-sm text-gray-500">
+      <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link href="/join" className={linkClass}>
           Create one

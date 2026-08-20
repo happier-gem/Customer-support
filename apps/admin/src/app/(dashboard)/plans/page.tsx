@@ -100,7 +100,7 @@ export default function PlansPage() {
   if (status === "loading" || (status === "authenticated" && loading)) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
@@ -110,8 +110,8 @@ export default function PlansPage() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Subscription Plans</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-xl font-semibold text-foreground">Subscription Plans</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Platform-wide plan tiers. Changing a limit here applies immediately to every organization on that plan.
         </p>
       </div>
@@ -127,7 +127,7 @@ export default function PlansPage() {
                 <div className="flex items-center justify-between">
                   <span className={planBadgeClass(p.plan)}>{p.plan}</span>
                   {!isEditing && (
-                    <button type="button" onClick={() => startEditing(p)} className="text-xs font-medium text-gray-500 hover:text-gray-900">
+                    <button type="button" onClick={() => startEditing(p)} className="text-xs font-medium text-muted-foreground hover:text-foreground">
                       Edit
                     </button>
                   )}
@@ -183,16 +183,16 @@ export default function PlansPage() {
                 ) : (
                   <dl className="mt-4 space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Team members</dt>
-                      <dd className="font-medium text-gray-900">{formatLimit(p.limits.teamMembers)}</dd>
+                      <dt className="text-muted-foreground">Team members</dt>
+                      <dd className="font-medium text-foreground">{formatLimit(p.limits.teamMembers)}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Tickets / month</dt>
-                      <dd className="font-medium text-gray-900">{formatLimit(p.limits.monthlyTickets)}</dd>
+                      <dt className="text-muted-foreground">Tickets / month</dt>
+                      <dd className="font-medium text-foreground">{formatLimit(p.limits.monthlyTickets)}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Feedback forms</dt>
-                      <dd className="font-medium text-gray-900">{formatLimit(p.limits.feedbackForms)}</dd>
+                      <dt className="text-muted-foreground">Feedback forms</dt>
+                      <dd className="font-medium text-foreground">{formatLimit(p.limits.feedbackForms)}</dd>
                     </div>
                     {savedPlan === p.plan && <p className={successTextClass}>Saved.</p>}
                   </dl>

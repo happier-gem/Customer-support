@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useOrganization } from "@/lib/organization-context";
 import { api, ApiError, type Paginated, type Ticket } from "@/lib/api";
 import {
   cardClass,
@@ -16,6 +17,7 @@ import {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, accessToken, status } = useAuth();
+  const { organization } = useOrganization();
 
   const [unassignedCount, setUnassignedCount] = useState<number | null>(null);
   const [assignedToMeCount, setAssignedToMeCount] = useState<number | null>(null);
@@ -53,47 +55,50 @@ export default function DashboardPage() {
   if (status === "loading" || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 space-y-6 px-4 py-8">
-      <h1 className="text-xl font-semibold text-gray-900">Welcome, {user.name}</h1>
+      <div>
+        <h1 className="text-xl font-semibold text-foreground">Welcome, {user.name}</h1>
+        {organization && <p className="text-sm text-muted-foreground">{organization.name}</p>}
+      </div>
 
       {error && <p className={errorTextClass}>{error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className={cardClass}>
-          <p className="text-sm text-gray-500">Open tickets</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{loading ? "…" : (unassignedCount ?? 0)}</p>
+          <p className="text-sm text-muted-foreground">Open tickets</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{loading ? "…" : (unassignedCount ?? 0)}</p>
         </div>
         <div className={cardClass}>
-          <p className="text-sm text-gray-500">Assigned to me</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{loading ? "…" : (assignedToMeCount ?? 0)}</p>
+          <p className="text-sm text-muted-foreground">Assigned to me</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{loading ? "…" : (assignedToMeCount ?? 0)}</p>
         </div>
       </div>
 
       <div className={cardClass}>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Recent tickets</h2>
-          <Link href="/tickets" className="text-sm font-medium text-gray-500 hover:text-gray-900">
+          <h2 className="text-sm font-semibold text-foreground">Recent tickets</h2>
+          <Link href="/tickets" className="text-sm font-medium text-muted-foreground hover:text-foreground">
             View all
           </Link>
         </div>
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !recent || recent.data.length === 0 ? (
-          <p className="text-sm text-gray-500">No tickets yet.</p>
+          <p className="text-sm text-muted-foreground">No tickets yet.</p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-border">
             {recent.data.map((ticket) => (
               <li key={ticket.id}>
-                <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-gray-50">
+                <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-muted">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900">{ticket.title}</p>
-                    <p className="text-xs text-gray-500">{ticket.customer.name}</p>
+                    <p className="truncate text-sm font-medium text-foreground">{ticket.title}</p>
+                    <p className="text-xs text-muted-foreground">{ticket.customer.name}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>

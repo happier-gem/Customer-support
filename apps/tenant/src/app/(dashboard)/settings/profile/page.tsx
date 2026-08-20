@@ -63,24 +63,24 @@ export default function ProfileSettingsPage() {
   if (status === "loading" || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
-      <h1 className="text-xl font-semibold text-gray-900">Profile</h1>
+      <h1 className="text-xl font-semibold text-foreground">Profile</h1>
 
       <section className={`${cardClass} space-y-4`}>
-        <h2 className="text-sm font-semibold text-gray-900">Profile picture</h2>
+        <h2 className="text-sm font-semibold text-foreground">Profile picture</h2>
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-border bg-muted">
             {user.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={`${API_BASE}${user.avatarUrl}`} alt="Profile picture" className="h-full w-full object-cover" />
             ) : (
-              <span className="text-lg font-semibold text-gray-400">{user.name.charAt(0).toUpperCase()}</span>
+              <span className="text-lg font-semibold text-muted-foreground">{user.name.charAt(0).toUpperCase()}</span>
             )}
           </div>
           <label className={`${secondaryButtonClass} cursor-pointer`}>
@@ -94,11 +94,11 @@ export default function ProfileSettingsPage() {
             />
           </label>
         </div>
-        <p className="text-xs text-gray-400">PNG, JPEG, or WebP. Max 2MB.</p>
+        <p className="text-xs text-muted-foreground">PNG, JPEG, or WebP. Max 2MB.</p>
       </section>
 
       <form onSubmit={handleSave} className={`${cardClass} space-y-4`}>
-        <h2 className="text-sm font-semibold text-gray-900">Personal details</h2>
+        <h2 className="text-sm font-semibold text-foreground">Personal details</h2>
         <div>
           <label htmlFor="name" className={labelClass}>
             Name
@@ -117,10 +117,10 @@ export default function ProfileSettingsPage() {
         <div>
           <label className={labelClass}>Email</label>
           <div className="flex items-center gap-2">
-            <input type="email" value={user.email} disabled className={`${inputClass} bg-gray-50 text-gray-500`} />
+            <input type="email" value={user.email} disabled className={`${inputClass} bg-muted text-muted-foreground`} />
             <span
               className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                user.emailVerified ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                user.emailVerified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
               }`}
             >
               {user.emailVerified ? "Verified" : "Unverified"}

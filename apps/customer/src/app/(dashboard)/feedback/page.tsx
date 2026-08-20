@@ -39,32 +39,35 @@ export default function CustomerFeedbackPage() {
 
   if (status === "loading" || !user) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   return (
           <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-900">Questionnaires</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Feedback</h1>
+          <p className="text-sm text-muted-foreground">Help us improve your experience.</p>
+        </div>
 
         {error && <p className={errorTextClass}>{error}</p>}
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !result || result.data.length === 0 ? (
           <div className={cardClass}>
-            <p className="text-sm text-gray-500">There are no questionnaires available right now.</p>
+            <p className="text-sm text-muted-foreground">There are no feedback forms available right now.</p>
           </div>
         ) : (
           <ul className="space-y-3">
             {result.data.map((form) => (
               <li key={form.id}>
-                <Link href={`/feedback/${form.id}`} className={`${cardClass} block space-y-1 hover:border-gray-300`}>
-                  <p className="font-medium text-gray-900">{form.title}</p>
-                  {form.description && <p className="text-sm text-gray-600">{form.description}</p>}
-                  <p className="text-xs text-gray-400">{form.category}</p>
+                <Link href={`/feedback/${form.id}`} className={`${cardClass} block space-y-1 hover:border-ring/40`}>
+                  <p className="font-medium text-foreground">{form.title}</p>
+                  {form.description && <p className="text-sm text-muted-foreground">{form.description}</p>}
+                  <p className="text-xs text-muted-foreground">{form.category}</p>
                 </Link>
               </li>
             ))}

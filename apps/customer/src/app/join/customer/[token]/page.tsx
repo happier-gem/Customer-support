@@ -58,18 +58,18 @@ export default function JoinByTokenPage() {
 
   if (loading || status === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex min-h-screen items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   if (loadError || !preview) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      <main className="flex min-h-screen items-center justify-center bg-muted px-4">
         <AuthCard title="Invalid join link" subtitle="This link is invalid, has expired, or has been revoked.">
           <p className={errorTextClass}>{loadError ?? "This join link is invalid or has been revoked."}</p>
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-muted-foreground">
             <Link href="/join" className={linkClass}>
               Try entering a code instead
             </Link>
@@ -83,11 +83,11 @@ export default function JoinByTokenPage() {
   if (status === "authenticated" && user) {
     const sameOrg = user.organizationId && preview.organizationName;
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      <main className="flex min-h-screen items-center justify-center bg-muted px-4">
         <AuthCard title={`Join ${preview.organizationName}`} subtitle="You're already signed in.">
           {sameOrg ? (
             <>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 You're signed in as <strong>{user.email}</strong>. To join a different organization's support portal, log out and
                 register a new account with a different email address — each account belongs to a single organization.
               </p>
@@ -102,7 +102,7 @@ export default function JoinByTokenPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-muted px-4">
       <AuthCard title={`Join ${preview.organizationName}`} subtitle="Create your account to get support from this organization.">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -154,7 +154,7 @@ export default function JoinByTokenPage() {
             {submitting ? "Creating your account…" : "Create account"}
           </button>
         </form>
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link href="/login" className={linkClass}>
             Sign in

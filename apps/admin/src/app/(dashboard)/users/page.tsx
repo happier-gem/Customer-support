@@ -74,15 +74,15 @@ export default function UsersPage() {
 
   if (status === "loading" || !user) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
-      <h1 className="text-xl font-semibold text-gray-900">Users</h1>
+      <h1 className="text-xl font-semibold text-foreground">Users</h1>
 
       <div className="flex flex-wrap items-center gap-3">
         <input
@@ -128,14 +128,14 @@ export default function UsersPage() {
 
       <div className={cardClass}>
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         ) : !result || result.data.length === 0 ? (
-          <p className="text-sm text-gray-500">No users match these filters.</p>
+          <p className="text-sm text-muted-foreground">No users match these filters.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-500">
+                <tr className="border-b border-border text-xs text-muted-foreground">
                   <th className="pb-2 font-medium">Name</th>
                   <th className="pb-2 font-medium">Email</th>
                   <th className="pb-2 font-medium">Role</th>
@@ -145,17 +145,17 @@ export default function UsersPage() {
                   <th className="pb-2 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {result.data.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50">
-                    <td className="max-w-[180px] truncate py-2 font-medium text-gray-900">{u.name}</td>
-                    <td className="max-w-[220px] truncate py-2 text-gray-600">{u.email}</td>
-                    <td className="py-2 text-gray-600">{roleLabel(u.role)}</td>
-                    <td className="max-w-[180px] truncate py-2 text-gray-600">{u.organizationName}</td>
+                  <tr key={u.id} className="hover:bg-muted">
+                    <td className="max-w-[180px] truncate py-2 font-medium text-foreground">{u.name}</td>
+                    <td className="max-w-[220px] truncate py-2 text-muted-foreground">{u.email}</td>
+                    <td className="py-2 text-muted-foreground">{roleLabel(u.role)}</td>
+                    <td className="max-w-[180px] truncate py-2 text-muted-foreground">{u.organizationName}</td>
                     <td className="py-2">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          u.isActive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                          u.isActive ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
                         }`}
                       >
                         {u.isActive ? "Active" : "Deactivated"}
@@ -164,7 +164,7 @@ export default function UsersPage() {
                     <td className="py-2">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          u.emailVerified ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                          u.emailVerified ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
                         }`}
                       >
                         {u.emailVerified ? "Verified" : "Unverified"}
@@ -188,7 +188,7 @@ export default function UsersPage() {
       </div>
 
       {result && result.pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Page {result.pagination.page} of {result.pagination.totalPages} ({result.pagination.total} total)
           </span>

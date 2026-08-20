@@ -27,7 +27,7 @@ export default function JoinByCodePage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-muted px-4">
       <AuthCard title="Join your organization" subtitle="Enter the organization code your support contact gave you.">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -50,7 +50,7 @@ export default function JoinByCodePage() {
             {loading ? "Checking…" : "Continue"}
           </button>
         </form>
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-muted-foreground">
           Have a join link instead? Just open it directly.
           <br />
           Already have an account?{" "}

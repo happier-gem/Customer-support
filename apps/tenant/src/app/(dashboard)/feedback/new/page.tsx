@@ -47,15 +47,15 @@ export default function NewFeedbackFormPage() {
 
   if (status === "loading" || !user) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   return (
           <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
-        <h1 className="mb-4 text-xl font-semibold text-gray-900">New Questionnaire</h1>
+        <h1 className="mb-4 text-xl font-semibold text-foreground">New Questionnaire</h1>
         <form onSubmit={handleSubmit} className={`${cardClass} space-y-4`}>
           <div>
             <label htmlFor="title" className={labelClass}>
@@ -115,7 +115,7 @@ export default function NewFeedbackFormPage() {
           <button type="submit" disabled={loading} className={buttonClass}>
             {loading ? "Creating…" : "Create questionnaire"}
           </button>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             The questionnaire starts inactive. Add your questions on the next screen, then activate it when you&apos;re ready for
             customers to respond.
           </p>

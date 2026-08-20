@@ -104,7 +104,7 @@ function VerifyEmailContent() {
           {resending ? "Sending…" : cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
         </button>
 
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-muted-foreground">
           Wrong email?{" "}
           <Link href="/join" className={linkClass}>
             Start over

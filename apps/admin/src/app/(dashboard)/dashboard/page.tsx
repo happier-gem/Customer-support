@@ -9,8 +9,8 @@ import { cardClass, errorTextClass } from "@/lib/ui";
 function StatTile({ label, value }: { label: string; value: number | string }) {
   return (
     <div className={cardClass}>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   if (status === "loading" || (status === "authenticated" && loading)) {
     return (
               <main className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         </main>
     );
   }
@@ -56,14 +56,14 @@ export default function DashboardPage() {
 
   return (
           <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-900">Platform Overview</h1>
+        <h1 className="text-xl font-semibold text-foreground">Platform Overview</h1>
 
         {loadError && <p className={errorTextClass}>{loadError}</p>}
 
         {stats && (
           <>
             <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700">Organizations</h2>
+              <h2 className="text-sm font-semibold text-foreground">Organizations</h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatTile label="Total" value={stats.organizations.total} />
                 <StatTile label="Active" value={stats.organizations.active} />
@@ -72,7 +72,7 @@ export default function DashboardPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700">Plans</h2>
+              <h2 className="text-sm font-semibold text-foreground">Plans</h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatTile label="Free" value={stats.plans.FREE} />
                 <StatTile label="Starter" value={stats.plans.STARTER} />
@@ -81,7 +81,7 @@ export default function DashboardPage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700">Platform Usage</h2>
+              <h2 className="text-sm font-semibold text-foreground">Platform Usage</h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatTile label="Tickets this month" value={stats.usage.ticketsThisMonth} />
                 <StatTile label="Feedback forms" value={stats.usage.feedbackForms} />

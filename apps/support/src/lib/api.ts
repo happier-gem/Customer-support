@@ -42,6 +42,15 @@ export interface PublicUser {
   avatarUrl: string | null;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  timezone: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LoginResponse {
   accessToken: string;
   user: PublicUser;
@@ -282,6 +291,9 @@ export const api = {
 
   listMembers: (accessToken: string) =>
     request<Member[]>("/organizations/me/members", { headers: authHeader(accessToken) }),
+
+  getOrganization: (accessToken: string) =>
+    request<Organization>("/organizations/me", { headers: authHeader(accessToken) }),
 
   listNotifications: (accessToken: string, params: NotificationListParams = {}) =>
     request<Paginated<Notification>>(`/notifications${buildQuery(params)}`, { headers: authHeader(accessToken) }),

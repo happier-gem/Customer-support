@@ -43,8 +43,8 @@ export default function FeedbackFormsPage() {
 
   if (status === "loading" || !user) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
@@ -52,7 +52,7 @@ export default function FeedbackFormsPage() {
   return (
           <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">Questionnaires</h1>
+          <h1 className="text-xl font-semibold text-foreground">Questionnaires</h1>
           <Link href="/feedback/new" className={`${buttonClass} w-auto! px-4`}>
             New Questionnaire
           </Link>
@@ -80,13 +80,13 @@ export default function FeedbackFormsPage() {
 
         <div className={cardClass}>
           {loading ? (
-            <p className="text-sm text-gray-500">Loading…</p>
+            <p className="text-sm text-muted-foreground">Loading…</p>
           ) : !result || result.data.length === 0 ? (
-            <p className="text-sm text-gray-500">No questionnaires yet. Create one to start collecting responses from customers.</p>
+            <p className="text-sm text-muted-foreground">No questionnaires yet. Create one to start collecting responses from customers.</p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-500">
+                <tr className="border-b border-border text-xs text-muted-foreground">
                   <th className="pb-2 font-medium">Title</th>
                   <th className="pb-2 font-medium">Category</th>
                   <th className="pb-2 font-medium">Status</th>
@@ -94,18 +94,18 @@ export default function FeedbackFormsPage() {
                   <th className="pb-2 font-medium">Responses</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {result.data.map((form) => (
-                  <tr key={form.id} className="cursor-pointer hover:bg-gray-50" onClick={() => router.push(`/feedback/${form.id}`)}>
-                    <td className="max-w-[260px] truncate py-2 font-medium text-gray-900">
+                  <tr key={form.id} className="cursor-pointer hover:bg-muted" onClick={() => router.push(`/feedback/${form.id}`)}>
+                    <td className="max-w-[260px] truncate py-2 font-medium text-foreground">
                       <Link href={`/feedback/${form.id}`}>{form.title}</Link>
                     </td>
-                    <td className="py-2 text-gray-600">{form.category}</td>
+                    <td className="py-2 text-muted-foreground">{form.category}</td>
                     <td className="py-2">
                       <span className={statusBadgeClass(form.status)}>{form.status}</span>
                     </td>
-                    <td className="py-2 text-gray-600">{form.questionCount}</td>
-                    <td className="py-2 text-gray-600">{form.responseCount}</td>
+                    <td className="py-2 text-muted-foreground">{form.questionCount}</td>
+                    <td className="py-2 text-muted-foreground">{form.responseCount}</td>
                   </tr>
                 ))}
               </tbody>
@@ -114,7 +114,7 @@ export default function FeedbackFormsPage() {
         </div>
 
         {result && result.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>
               Page {result.pagination.page} of {result.pagination.totalPages} ({result.pagination.total} total)
             </span>

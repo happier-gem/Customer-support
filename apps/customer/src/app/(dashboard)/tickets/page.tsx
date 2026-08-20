@@ -53,8 +53,8 @@ export default function TicketsPage() {
 
   if (status === "loading" || !user) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
@@ -63,12 +63,12 @@ export default function TicketsPage() {
           <main className="mx-auto w-full max-w-4xl flex-1 space-y-4 px-4 py-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-gray-900">My Tickets</h1>
+            <h1 className="text-xl font-semibold text-foreground">My Tickets</h1>
             <span
-              className="flex items-center gap-1 text-xs text-gray-400"
+              className="flex items-center gap-1 text-xs text-muted-foreground"
               title={connected ? "Live updates connected" : "Live updates unavailable"}
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-green-500" : "bg-gray-300"}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-success" : "bg-muted-foreground/30"}`} />
               {connected ? "Live" : "Offline"}
             </span>
           </div>
@@ -99,19 +99,19 @@ export default function TicketsPage() {
 
         <div className={cardClass}>
           {loading ? (
-            <p className="text-sm text-gray-500">Loading…</p>
+            <p className="text-sm text-muted-foreground">Loading…</p>
           ) : !result || result.data.length === 0 ? (
-            <p className="text-sm text-gray-500">No tickets yet. Create your first ticket to get started.</p>
+            <p className="text-sm text-muted-foreground">No tickets yet. Create your first ticket to get started.</p>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-border">
               {result.data.map((ticket) => (
                 <li key={ticket.id}>
-                  <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-gray-50">
+                  <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-4 py-3 hover:bg-muted">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-gray-900">
-                        {ticket.title} <span className="font-normal text-gray-400">#{ticket.id.slice(0, 8)}</span>
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {ticket.title} <span className="font-normal text-muted-foreground">#{ticket.id.slice(0, 8)}</span>
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         Opened {new Date(ticket.createdAt).toLocaleDateString()} · Updated{" "}
                         {new Date(ticket.updatedAt).toLocaleDateString()}
                         {ticket.assignedAgent && ` · Agent: ${ticket.assignedAgent.name}`}
@@ -129,7 +129,7 @@ export default function TicketsPage() {
         </div>
 
         {result && result.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>
               Page {result.pagination.page} of {result.pagination.totalPages} ({result.pagination.total} total)
             </span>

@@ -31,11 +31,11 @@ const CATEGORIES: FeedbackCategory[] = ["SUPPORT", "PRODUCT", "SERVICE", "GENERA
 function AnswerLine({ answer }: { answer: FeedbackResponse["answers"][number] }) {
   return (
     <div className="text-sm">
-      <p className="font-medium text-gray-700">{answer.questionLabel}</p>
+      <p className="font-medium text-foreground">{answer.questionLabel}</p>
       {answer.questionType === "RATING" ? (
-        <p className="text-gray-600">{answer.ratingValue !== null ? `${answer.ratingValue} / 5` : "No answer"}</p>
+        <p className="text-muted-foreground">{answer.ratingValue !== null ? `${answer.ratingValue} / 5` : "No answer"}</p>
       ) : (
-        <p className="whitespace-pre-wrap text-gray-600">{answer.textValue || "No answer"}</p>
+        <p className="whitespace-pre-wrap text-muted-foreground">{answer.textValue || "No answer"}</p>
       )}
     </div>
   );
@@ -173,8 +173,8 @@ export default function FeedbackFormBuilderPage() {
 
   if (status === "loading" || !user || loading) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
@@ -220,9 +220,9 @@ export default function FeedbackFormBuilderPage() {
             ) : (
               <>
                 <div>
-                  <h1 className="text-lg font-semibold text-gray-900">{form.title}</h1>
-                  {form.description && <p className="mt-1 text-sm text-gray-600">{form.description}</p>}
-                  <p className="mt-1 text-xs text-gray-500">Category: {form.category}</p>
+                  <h1 className="text-lg font-semibold text-foreground">{form.title}</h1>
+                  {form.description && <p className="mt-1 text-sm text-muted-foreground">{form.description}</p>}
+                  <p className="mt-1 text-xs text-muted-foreground">Category: {form.category}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className={statusBadgeClass(form.status)}>{form.status}</span>
@@ -234,7 +234,7 @@ export default function FeedbackFormBuilderPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
             {form.status === "INACTIVE" ? (
               <button
                 disabled={busy || form.questions.length === 0}
@@ -275,7 +275,7 @@ export default function FeedbackFormBuilderPage() {
 
         <div className={`${cardClass} space-y-3`}>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">Questions</h2>
+            <h2 className="text-sm font-semibold text-foreground">Questions</h2>
             {!showAddQuestion && (
               <button onClick={() => setShowAddQuestion(true)} className={`${secondaryButtonClass} w-auto`}>
                 Add question
@@ -283,15 +283,15 @@ export default function FeedbackFormBuilderPage() {
             )}
           </div>
 
-          {form.questions.length === 0 && !showAddQuestion && <p className="text-sm text-gray-500">No questions yet.</p>}
+          {form.questions.length === 0 && !showAddQuestion && <p className="text-sm text-muted-foreground">No questions yet.</p>}
 
           <ul className="space-y-3">
             {form.questions.map((question) => (
-              <li key={question.id} className="rounded-md border border-gray-100 p-3">
+              <li key={question.id} className="rounded-md border border-border p-3">
                 {editingQuestionId === question.id ? (
                   <div className="space-y-2">
                     <input className={inputClass} value={editQuestionLabel} onChange={(e) => setEditQuestionLabel(e.target.value)} maxLength={300} />
-                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <label className="flex items-center gap-2 text-sm text-foreground">
                       <input type="checkbox" checked={editQuestionRequired} onChange={(e) => setEditQuestionRequired(e.target.checked)} />
                       Required
                     </label>
@@ -320,8 +320,8 @@ export default function FeedbackFormBuilderPage() {
                 ) : (
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{question.label}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-foreground">{question.label}</p>
+                      <p className="text-xs text-muted-foreground">
                         {question.type} · {question.required ? "Required" : "Optional"}
                         {question.type === "TEXT" && question.maxLength ? ` · max ${question.maxLength} chars` : ""}
                       </p>
@@ -341,7 +341,7 @@ export default function FeedbackFormBuilderPage() {
           </ul>
 
           {showAddQuestion && (
-            <div className="space-y-2 rounded-md border border-gray-100 p-3">
+            <div className="space-y-2 rounded-md border border-border p-3">
               <select className={selectClass} value={newQuestionType} onChange={(e) => setNewQuestionType(e.target.value as FeedbackQuestionType)}>
                 <option value="RATING">Rating (1-5)</option>
                 <option value="TEXT">Text</option>
@@ -353,7 +353,7 @@ export default function FeedbackFormBuilderPage() {
                 onChange={(e) => setNewQuestionLabel(e.target.value)}
                 maxLength={300}
               />
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <input type="checkbox" checked={newQuestionRequired} onChange={(e) => setNewQuestionRequired(e.target.checked)} />
                 Required
               </label>
@@ -383,17 +383,17 @@ export default function FeedbackFormBuilderPage() {
         </div>
 
         <div className={`${cardClass} space-y-3`}>
-          <h2 className="text-sm font-semibold text-gray-900">Responses ({responses?.pagination.total ?? 0})</h2>
+          <h2 className="text-sm font-semibold text-foreground">Responses ({responses?.pagination.total ?? 0})</h2>
           {!responses || responses.data.length === 0 ? (
-            <p className="text-sm text-gray-500">No responses yet.</p>
+            <p className="text-sm text-muted-foreground">No responses yet.</p>
           ) : (
             <ul className="space-y-4">
               {responses.data.map((response) => (
-                <li key={response.id} className="space-y-2 rounded-md border border-gray-100 p-3">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                <li key={response.id} className="space-y-2 rounded-md border border-border p-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>
                       {response.anonymous ? (
-                        <span className="font-medium text-gray-700">Anonymous</span>
+                        <span className="font-medium text-foreground">Anonymous</span>
                       ) : (
                         response.customer && `${response.customer.name} (${response.customer.email})`
                       )}
@@ -410,7 +410,7 @@ export default function FeedbackFormBuilderPage() {
             </ul>
           )}
           {responses && responses.pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between text-sm text-gray-500">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>
                 Page {responses.pagination.page} of {responses.pagination.totalPages}
               </span>

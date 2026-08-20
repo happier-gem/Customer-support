@@ -21,10 +21,10 @@ import {
 const ASSIGNABLE_ROLES = ["TENANT_OWNER", "SUPPORT_AGENT"] as const;
 
 const invitationStatusClass: Record<Invitation["status"], string> = {
-  PENDING: "bg-amber-50 text-amber-700",
-  ACCEPTED: "bg-green-50 text-green-700",
-  EXPIRED: "bg-gray-100 text-gray-500",
-  REVOKED: "bg-gray-100 text-gray-500",
+  PENDING: "bg-warning/10 text-warning",
+  ACCEPTED: "bg-success/10 text-success",
+  EXPIRED: "bg-muted text-muted-foreground",
+  REVOKED: "bg-muted text-muted-foreground",
 };
 
 export default function TeamSettingsPage() {
@@ -179,7 +179,7 @@ export default function TeamSettingsPage() {
   if (status === "loading" || loading) {
     return (
               <main className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         </main>
     );
   }
@@ -192,10 +192,10 @@ export default function TeamSettingsPage() {
 
   return (
           <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-900">Team members</h1>
+        <h1 className="text-xl font-semibold text-foreground">Team members</h1>
 
         <form onSubmit={handleInvite} className={`${cardClass} space-y-4`}>
-          <h2 className="text-sm font-semibold text-gray-900">Invite a teammate</h2>
+          <h2 className="text-sm font-semibold text-foreground">Invite a teammate</h2>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1">
               <label htmlFor="inviteEmail" className={labelClass}>
@@ -252,11 +252,11 @@ export default function TeamSettingsPage() {
         {rowError && <p className={errorTextClass}>{rowError}</p>}
 
         <section className={`${cardClass} space-y-4`}>
-          <h2 className="text-sm font-semibold text-gray-900">Members</h2>
+          <h2 className="text-sm font-semibold text-foreground">Members</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-400">
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
                   <th className="py-2 pr-4">Name</th>
                   <th className="py-2 pr-4">Email</th>
                   <th className="py-2 pr-4">Role</th>
@@ -269,12 +269,12 @@ export default function TeamSettingsPage() {
                   const isSelf = member.id === user.id;
                   const busy = busyUserId === member.id;
                   return (
-                    <tr key={member.id} className="border-b border-gray-100 last:border-0">
-                      <td className="py-2 pr-4 text-gray-900">
+                    <tr key={member.id} className="border-b border-border last:border-0">
+                      <td className="py-2 pr-4 text-foreground">
                         {member.name}
-                        {isSelf && <span className="ml-1 text-xs text-gray-400">(you)</span>}
+                        {isSelf && <span className="ml-1 text-xs text-muted-foreground">(you)</span>}
                       </td>
-                      <td className="py-2 pr-4 text-gray-600">{member.email}</td>
+                      <td className="py-2 pr-4 text-muted-foreground">{member.email}</td>
                       <td className="py-2 pr-4">
                         <select
                           value={member.role}
@@ -295,7 +295,7 @@ export default function TeamSettingsPage() {
                       <td className="py-2 pr-4">
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            member.isActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                            member.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {member.isActive ? "Active" : "Removed"}
@@ -323,11 +323,11 @@ export default function TeamSettingsPage() {
 
         {pendingInvitations.length > 0 && (
           <section className={`${cardClass} space-y-4`}>
-            <h2 className="text-sm font-semibold text-gray-900">Pending invitations</h2>
+            <h2 className="text-sm font-semibold text-foreground">Pending invitations</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-400">
+                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="py-2 pr-4">Email</th>
                     <th className="py-2 pr-4">Role</th>
                     <th className="py-2 pr-4">Status</th>
@@ -340,15 +340,15 @@ export default function TeamSettingsPage() {
                     const busy = busyInvitationId === invitation.id;
                     const hasLink = Boolean(inviteUrls[invitation.id]);
                     return (
-                      <tr key={invitation.id} className="border-b border-gray-100 last:border-0">
-                        <td className="py-2 pr-4 text-gray-900">{invitation.email}</td>
-                        <td className="py-2 pr-4 text-gray-600">{invitation.role}</td>
+                      <tr key={invitation.id} className="border-b border-border last:border-0">
+                        <td className="py-2 pr-4 text-foreground">{invitation.email}</td>
+                        <td className="py-2 pr-4 text-muted-foreground">{invitation.role}</td>
                         <td className="py-2 pr-4">
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${invitationStatusClass[invitation.status]}`}>
                             {invitation.status}
                           </span>
                         </td>
-                        <td className="py-2 pr-4 text-gray-500">{new Date(invitation.expiresAt).toLocaleDateString()}</td>
+                        <td className="py-2 pr-4 text-muted-foreground">{new Date(invitation.expiresAt).toLocaleDateString()}</td>
                         <td className="py-2 pr-4">
                           <div className="flex items-center justify-end gap-2">
                             {hasLink && (

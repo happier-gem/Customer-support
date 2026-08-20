@@ -133,8 +133,8 @@ export default function TenantTicketDetailPage() {
 
   if (status === "loading" || !user || loading) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
@@ -155,30 +155,30 @@ export default function TenantTicketDetailPage() {
           <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <div className={`${cardClass} space-y-3`}>
           <div className="flex items-start justify-between gap-4">
-            <h1 className="text-lg font-semibold text-gray-900">{ticket.title}</h1>
+            <h1 className="text-lg font-semibold text-foreground">{ticket.title}</h1>
             <div className="flex shrink-0 items-center gap-2">
               <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
               <span className={statusBadgeClass(ticket.status)}>{formatStatusLabel(ticket.status)}</span>
             </div>
           </div>
-          <p className="whitespace-pre-wrap text-sm text-gray-700">{ticket.description}</p>
-          <dl className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3 text-xs text-gray-500">
+          <p className="whitespace-pre-wrap text-sm text-foreground">{ticket.description}</p>
+          <dl className="grid grid-cols-2 gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
             <div>
-              <dt className="font-medium text-gray-600">Customer</dt>
+              <dt className="font-medium text-muted-foreground">Customer</dt>
               <dd>
                 {ticket.customer.name} ({ticket.customer.email})
               </dd>
             </div>
             <div>
-              <dt className="font-medium text-gray-600">Assigned agent</dt>
+              <dt className="font-medium text-muted-foreground">Assigned agent</dt>
               <dd>{ticket.assignedAgent ? ticket.assignedAgent.name : "Unassigned"}</dd>
             </div>
             <div>
-              <dt className="font-medium text-gray-600">Opened</dt>
+              <dt className="font-medium text-muted-foreground">Opened</dt>
               <dd>{new Date(ticket.createdAt).toLocaleString()}</dd>
             </div>
             <div>
-              <dt className="font-medium text-gray-600">Last updated</dt>
+              <dt className="font-medium text-muted-foreground">Last updated</dt>
               <dd>{new Date(ticket.updatedAt).toLocaleString()}</dd>
             </div>
           </dl>
@@ -186,7 +186,7 @@ export default function TenantTicketDetailPage() {
 
         {(canAssign || canChangeStatus) && (
           <div className={`${cardClass} space-y-3`}>
-            <h2 className="text-sm font-semibold text-gray-900">Actions</h2>
+            <h2 className="text-sm font-semibold text-foreground">Actions</h2>
             <div className="flex flex-wrap items-center gap-3">
               {canAssign && (
                 <div className="flex items-center gap-2">
@@ -238,17 +238,17 @@ export default function TenantTicketDetailPage() {
         )}
 
         <div className={`${cardClass} space-y-3`}>
-          <h2 className="text-sm font-semibold text-gray-900">Attachments</h2>
+          <h2 className="text-sm font-semibold text-foreground">Attachments</h2>
           {ticket.attachments.length === 0 ? (
-            <p className="text-sm text-gray-500">No attachments yet.</p>
+            <p className="text-sm text-muted-foreground">No attachments yet.</p>
           ) : (
             <ul className="space-y-2">
               {ticket.attachments.map((a) => (
                 <li key={a.id} className="flex items-center justify-between text-sm">
-                  <button onClick={() => handleDownload(a.id, a.fileName)} className="truncate text-left text-gray-900 underline underline-offset-2 hover:text-gray-700">
+                  <button onClick={() => handleDownload(a.id, a.fileName)} className="truncate text-left text-foreground underline underline-offset-2 hover:text-foreground">
                     {a.fileName}
                   </button>
-                  <span className="shrink-0 text-xs text-gray-400">{formatBytes(a.size)}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{formatBytes(a.size)}</span>
                 </li>
               ))}
             </ul>
@@ -262,19 +262,19 @@ export default function TenantTicketDetailPage() {
         </div>
 
         <div className={`${cardClass} space-y-3`}>
-          <h2 className="text-sm font-semibold text-gray-900">Conversation</h2>
+          <h2 className="text-sm font-semibold text-foreground">Conversation</h2>
           {ticket.messages.length === 0 ? (
-            <p className="text-sm text-gray-500">No replies yet.</p>
+            <p className="text-sm text-muted-foreground">No replies yet.</p>
           ) : (
             <ul className="space-y-3">
               {ticket.messages.map((m) => {
                 const isMine = m.author.id === user.id;
                 return (
                   <li key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isMine ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}>
-                      {!isMine && <p className="text-xs font-medium text-gray-500">{m.author.name}</p>}
+                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isMine ? "bg-primary text-white" : "bg-muted text-foreground"}`}>
+                      {!isMine && <p className="text-xs font-medium text-muted-foreground">{m.author.name}</p>}
                       <p className="whitespace-pre-wrap text-sm">{m.body}</p>
-                      <p className={`mt-1 text-xs ${isMine ? "text-gray-300" : "text-gray-400"}`}>
+                      <p className={`mt-1 text-xs ${isMine ? "text-muted-foreground/60" : "text-muted-foreground"}`}>
                         {new Date(m.createdAt).toLocaleString()}
                       </p>
                     </div>
@@ -301,11 +301,11 @@ export default function TenantTicketDetailPage() {
         </div>
 
         <div className={`${cardClass} space-y-3`}>
-          <h2 className="text-sm font-semibold text-gray-900">History</h2>
+          <h2 className="text-sm font-semibold text-foreground">History</h2>
           <ul className="space-y-2">
             {ticket.history.map((entry) => (
-              <li key={entry.id} className="text-sm text-gray-600">
-                <span>{historyLine(entry)}</span> <span className="text-xs text-gray-400">{new Date(entry.createdAt).toLocaleString()}</span>
+              <li key={entry.id} className="text-sm text-muted-foreground">
+                <span>{historyLine(entry)}</span> <span className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</span>
               </li>
             ))}
           </ul>

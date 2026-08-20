@@ -98,7 +98,7 @@ export default function RegisterPage() {
           {loading ? "Creating your account…" : "Create account"}
         </button>
       </form>
-      <p className="text-center text-sm text-gray-500">
+      <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href="/login" className={linkClass}>
           Sign in

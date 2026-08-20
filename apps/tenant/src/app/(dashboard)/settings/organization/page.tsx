@@ -3,6 +3,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useOrganization } from "@/lib/organization-context";
 import { api, ApiError, API_BASE, type Organization } from "@/lib/api";
 import {
   buttonClass,
@@ -28,6 +29,7 @@ function listTimezones(): string[] {
 export default function OrganizationSettingsPage() {
   const router = useRouter();
   const { user, accessToken, status } = useAuth();
+  const { refresh: refreshOrganization } = useOrganization();
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [name, setName] = useState("");
@@ -82,6 +84,7 @@ export default function OrganizationSettingsPage() {
       const updated = await api.updateOrganization(accessToken, { name, timezone });
       setOrg(updated);
       setSuccess("Organization settings saved.");
+      refreshOrganization();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -101,6 +104,7 @@ export default function OrganizationSettingsPage() {
       const updated = await api.uploadLogo(accessToken, file);
       setOrg(updated);
       setSuccess("Logo updated.");
+      refreshOrganization();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to upload logo.");
     } finally {
@@ -111,7 +115,7 @@ export default function OrganizationSettingsPage() {
   if (status === "loading" || loading) {
     return (
               <main className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         </main>
     );
   }
@@ -122,17 +126,17 @@ export default function OrganizationSettingsPage() {
 
   return (
           <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-900">Organization settings</h1>
+        <h1 className="text-xl font-semibold text-foreground">Organization settings</h1>
 
         <section className={`${cardClass} space-y-4`}>
-          <h2 className="text-sm font-semibold text-gray-900">Logo</h2>
+          <h2 className="text-sm font-semibold text-foreground">Logo</h2>
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-border bg-muted">
               {org.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={`${API_BASE}${org.logoUrl}`} alt="Organization logo" className="h-full w-full object-cover" />
               ) : (
-                <span className="text-xs text-gray-400">No logo</span>
+                <span className="text-xs text-muted-foreground">No logo</span>
               )}
             </div>
             <label className={`${secondaryButtonClass} cursor-pointer`}>
@@ -146,11 +150,11 @@ export default function OrganizationSettingsPage() {
               />
             </label>
           </div>
-          <p className="text-xs text-gray-400">PNG, JPEG, or WebP. Max 2MB.</p>
+          <p className="text-xs text-muted-foreground">PNG, JPEG, or WebP. Max 2MB.</p>
         </section>
 
         <form onSubmit={handleSave} className={`${cardClass} space-y-4`}>
-          <h2 className="text-sm font-semibold text-gray-900">Company details</h2>
+          <h2 className="text-sm font-semibold text-foreground">Company details</h2>
           <div>
             <label htmlFor="name" className={labelClass}>
               Company name

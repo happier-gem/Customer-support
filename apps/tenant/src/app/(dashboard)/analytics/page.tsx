@@ -10,7 +10,7 @@ import { cardClass, errorTextClass, formatDurationMinutes } from "@/lib/ui";
 function StarRating({ score }: { score: number }) {
   const rounded = Math.round(score);
   return (
-    <span aria-hidden className="text-lg leading-none text-amber-500">
+    <span aria-hidden className="text-lg leading-none text-warning">
       {Array.from({ length: 5 }, (_, i) => (i < rounded ? "★" : "☆")).join("")}
     </span>
   );
@@ -56,7 +56,7 @@ export default function AnalyticsPage() {
   if (status === "loading" || (status === "authenticated" && user?.role === "TENANT_OWNER" && loading)) {
     return (
               <main className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-gray-500">Loading analytics…</p>
+          <p className="text-sm text-muted-foreground">Loading analytics…</p>
         </main>
     );
   }
@@ -68,7 +68,7 @@ export default function AnalyticsPage() {
   if (loadError) {
     return (
               <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-          <h1 className="mb-6 text-xl font-semibold text-gray-900">Analytics</h1>
+          <h1 className="mb-6 text-xl font-semibold text-foreground">Analytics</h1>
           <p className={errorTextClass}>Unable to load analytics. {loadError}</p>
         </main>
     );
@@ -82,34 +82,34 @@ export default function AnalyticsPage() {
 
   return (
           <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-900">Analytics</h1>
+        <h1 className="text-xl font-semibold text-foreground">Analytics</h1>
 
         <section className={cardClass}>
-          <h2 className="mb-4 text-sm font-semibold text-gray-900">Tickets Created</h2>
+          <h2 className="mb-4 text-sm font-semibold text-foreground">Tickets Created</h2>
           {hasTicketData ? (
             <MonthlyTicketsChart data={overview.ticketsCreatedPerMonth} />
           ) : (
-            <p className="py-8 text-center text-sm text-gray-500">No ticket data yet.</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">No ticket data yet.</p>
           )}
         </section>
 
         <div className="grid gap-6 sm:grid-cols-2">
           <section className={cardClass}>
-            <h2 className="mb-3 text-sm font-semibold text-gray-900">Average Response Time</h2>
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Average Response Time</h2>
             {overview.averageResponseTimeMinutes === null ? (
-              <p className="text-sm text-gray-500">No agent responses yet.</p>
+              <p className="text-sm text-muted-foreground">No agent responses yet.</p>
             ) : (
-              <p className="text-2xl font-semibold text-gray-900">{formatDurationMinutes(overview.averageResponseTimeMinutes)}</p>
+              <p className="text-2xl font-semibold text-foreground">{formatDurationMinutes(overview.averageResponseTimeMinutes)}</p>
             )}
           </section>
 
           <section className={cardClass}>
-            <h2 className="mb-3 text-sm font-semibold text-gray-900">Customer Satisfaction</h2>
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Customer Satisfaction</h2>
             {overview.customerSatisfactionScore === null ? (
-              <p className="text-sm text-gray-500">No rating data yet.</p>
+              <p className="text-sm text-muted-foreground">No rating data yet.</p>
             ) : (
               <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-semibold text-gray-900">{overview.customerSatisfactionScore.toFixed(1)} / 5</p>
+                <p className="text-2xl font-semibold text-foreground">{overview.customerSatisfactionScore.toFixed(1)} / 5</p>
                 <StarRating score={overview.customerSatisfactionScore} />
               </div>
             )}
@@ -117,15 +117,15 @@ export default function AnalyticsPage() {
         </div>
 
         <section className={cardClass}>
-          <h2 className="mb-3 text-sm font-semibold text-gray-900">Tickets</h2>
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Tickets</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-2xl font-semibold text-gray-900">{overview.openTickets}</p>
-              <p className="text-sm text-gray-500">Open</p>
+              <p className="text-2xl font-semibold text-foreground">{overview.openTickets}</p>
+              <p className="text-sm text-muted-foreground">Open</p>
             </div>
             <div>
-              <p className="text-2xl font-semibold text-gray-900">{overview.closedTickets}</p>
-              <p className="text-sm text-gray-500">Closed</p>
+              <p className="text-2xl font-semibold text-foreground">{overview.closedTickets}</p>
+              <p className="text-sm text-muted-foreground">Closed</p>
             </div>
           </div>
         </section>

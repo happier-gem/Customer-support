@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
           </button>
         </form>
       )}
-      <p className="text-center text-sm text-gray-500">
+      <p className="text-center text-sm text-muted-foreground">
         <Link href="/login" className={linkClass}>
           Back to sign in
         </Link>

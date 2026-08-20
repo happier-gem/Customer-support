@@ -31,7 +31,7 @@ export default function CustomerFeedbackFormPage() {
       const detail = await api.getFeedbackForm(accessToken, params.id);
       setForm(detail);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "This questionnaire isn't available.");
+      setError(err instanceof ApiError ? err.message : "This feedback form isn't available.");
     } finally {
       setLoading(false);
     }
@@ -71,8 +71,8 @@ export default function CustomerFeedbackFormPage() {
 
   if (status === "loading" || !user || loading) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
@@ -80,9 +80,9 @@ export default function CustomerFeedbackFormPage() {
   if (error || !form) {
     return (
               <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
-          <p className={errorTextClass}>{error ?? "This questionnaire isn't available."}</p>
+          <p className={errorTextClass}>{error ?? "This feedback form isn't available."}</p>
           <button onClick={() => router.push("/feedback")} className={`${secondaryButtonClass} mt-4 w-auto`}>
-            Back to questionnaires
+            Back to feedback
           </button>
         </main>
     );
@@ -92,9 +92,9 @@ export default function CustomerFeedbackFormPage() {
     return (
               <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
           <div className={`${cardClass} space-y-3 text-center`}>
-            <p className={successTextClass}>Thank you — your response has been submitted.</p>
+            <p className={successTextClass}>Thank you — your feedback has been submitted.</p>
             <button onClick={() => router.push("/feedback")} className={`${buttonClass} w-auto! px-4`}>
-              Back to questionnaires
+              Back to feedback
             </button>
           </div>
         </main>
@@ -104,8 +104,8 @@ export default function CustomerFeedbackFormPage() {
   return (
           <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">{form.title}</h1>
-          {form.description && <p className="mt-1 text-sm text-gray-600">{form.description}</p>}
+          <h1 className="text-xl font-semibold text-foreground">{form.title}</h1>
+          {form.description && <p className="mt-1 text-sm text-muted-foreground">{form.description}</p>}
         </div>
 
         <div className={`${cardClass} space-y-6`}>
@@ -113,7 +113,7 @@ export default function CustomerFeedbackFormPage() {
             <div key={question.id}>
               <label className={labelClass}>
                 {question.label}
-                {question.required && <span className="text-red-600"> *</span>}
+                {question.required && <span className="text-danger"> *</span>}
               </label>
               {question.type === "RATING" ? (
                 <div className="flex gap-2">
@@ -122,10 +122,10 @@ export default function CustomerFeedbackFormPage() {
                       key={value}
                       type="button"
                       onClick={() => setRatings((prev) => ({ ...prev, [question.id]: value }))}
-                      className={`h-10 w-10 rounded-md border text-sm font-medium transition-colors ${
+                      className={`h-10 w-10 rounded-md border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                         ratings[question.id] === value
-                          ? "border-indigo-600 bg-indigo-600 text-white"
-                          : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input bg-card text-foreground hover:bg-muted"
                       }`}
                     >
                       {value}
@@ -145,14 +145,14 @@ export default function CustomerFeedbackFormPage() {
             </div>
           ))}
 
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-foreground">
             <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
             Submit anonymously (your name and email won&apos;t be shown to the organization)
           </label>
 
           {submitError && <p className={errorTextClass}>{submitError}</p>}
           <button disabled={submitting} onClick={handleSubmit} className={buttonClass}>
-            {submitting ? "Submitting…" : "Submit response"}
+            {submitting ? "Submitting…" : "Submit feedback"}
           </button>
         </div>
       </main>

@@ -45,6 +45,15 @@ export interface PublicUser {
   avatarUrl: string | null;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  timezone: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface JoinPreview {
   organizationName: string;
   joinToken: string;
@@ -285,6 +294,9 @@ export const api = {
     }),
 
   me: (accessToken: string) => request<PublicUser>("/auth/me", { headers: authHeader(accessToken) }),
+
+  getOrganization: (accessToken: string) =>
+    request<Organization>("/organizations/me", { headers: authHeader(accessToken) }),
 
   changePassword: (accessToken: string, currentPassword: string, newPassword: string) =>
     request<{ message: string }>("/auth/me/password", {

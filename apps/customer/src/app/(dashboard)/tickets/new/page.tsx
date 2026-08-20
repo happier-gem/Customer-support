@@ -138,15 +138,15 @@ export default function NewTicketPage() {
 
   if (status === "loading" || !user) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <main className="flex flex-1 items-center justify-center bg-muted">
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
-      <h1 className="mb-4 text-xl font-semibold text-gray-900">New Ticket</h1>
+      <h1 className="mb-4 text-xl font-semibold text-foreground">New Ticket</h1>
       <form onSubmit={handleSubmit} className={`${cardClass} space-y-4`}>
         <div>
           <label htmlFor="title" className={labelClass}>
@@ -220,16 +220,16 @@ export default function NewTicketPage() {
           {images.length > 0 && (
             <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {images.map((img) => (
-                <li key={img.id} className="relative overflow-hidden rounded-md border border-gray-200">
+                <li key={img.id} className="relative overflow-hidden rounded-md border border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={img.previewUrl} alt={img.file.name} className="h-24 w-full object-cover" />
-                  <div className="flex items-center justify-between gap-1 bg-white px-2 py-1 text-xs">
-                    <span className="truncate text-gray-600">
+                  <div className="flex items-center justify-between gap-1 bg-card px-2 py-1 text-xs">
+                    <span className="truncate text-muted-foreground">
                       {img.status === "queued" && "Ready"}
                       {img.status === "uploading" && "Uploading…"}
                       {img.status === "uploaded" && "Uploaded ✓"}
                       {img.status === "failed" && (
-                        <span className="text-red-600" title={img.error}>
+                        <span className="text-danger" title={img.error}>
                           Failed
                         </span>
                       )}
@@ -238,7 +238,7 @@ export default function NewTicketPage() {
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(img.id)}
-                        className="shrink-0 font-medium text-gray-400 hover:text-gray-700"
+                        className="shrink-0 font-medium text-muted-foreground hover:text-foreground"
                         aria-label={`Remove ${img.file.name}`}
                       >
                         ✕

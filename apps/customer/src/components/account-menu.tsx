@@ -78,7 +78,7 @@ export function AccountMenu({ user, collapsed, onNavigate }: AccountMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         title={collapsed ? `${user.name} (${user.role.replace(/_/g, " ")})` : undefined}
-        className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-gray-100 ${
+        className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted ${
           collapsed ? "justify-center" : ""
         }`}
       >
@@ -93,10 +93,10 @@ export function AccountMenu({ user, collapsed, onNavigate }: AccountMenuProps) {
         {!collapsed && (
           <>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-gray-900">{user.name}</span>
-              <span className="block truncate text-xs text-gray-500">{user.role.replace(/_/g, " ")}</span>
+              <span className="block truncate text-sm font-medium text-foreground">{user.name}</span>
+              <span className="block truncate text-xs text-muted-foreground">{user.role.replace(/_/g, " ")}</span>
             </span>
-            <ChevronsUpDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+            <ChevronsUpDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
           </>
         )}
       </button>
@@ -104,13 +104,13 @@ export function AccountMenu({ user, collapsed, onNavigate }: AccountMenuProps) {
       <div
         role="menu"
         aria-label="Account menu"
-        className={`absolute bottom-full z-50 mb-2 w-56 origin-bottom rounded-lg border border-gray-200 bg-white py-1 shadow-lg transition-all duration-150 ${
+        className={`absolute bottom-full z-50 mb-2 w-56 origin-bottom rounded-lg border border-border bg-card py-1 shadow-lg transition-all duration-150 ${
           collapsed ? "left-full ml-2 mb-0 origin-bottom-left" : "left-0 right-0"
         } ${open ? "pointer-events-auto scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"}`}
       >
-        <div className="border-b border-gray-100 px-3 py-2">
-          <p className="truncate text-sm font-medium text-gray-900">{user.name}</p>
-          <p className="truncate text-xs text-gray-500">{user.email}</p>
+        <div className="border-b border-border px-3 py-2">
+          <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
+          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
         </div>
         {MENU_ITEMS.map((item, i) => {
           const Icon = item.icon;
@@ -122,22 +122,22 @@ export function AccountMenu({ user, collapsed, onNavigate }: AccountMenuProps) {
               role="menuitem"
               onClick={handleNavigate}
               tabIndex={open ? 0 : -1}
-              className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted"
             >
-              <Icon className="h-4 w-4 shrink-0 text-gray-400" />
+              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
               {item.label}
             </Link>
           );
         })}
-        <div className="my-1 border-t border-gray-100" />
+        <div className="my-1 border-t border-border" />
         <button
           type="button"
           role="menuitem"
           onClick={handleLogout}
           tabIndex={open ? 0 : -1}
-          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-foreground hover:bg-muted"
         >
-          <LogOut className="h-4 w-4 shrink-0 text-gray-400" />
+          <LogOut className="h-4 w-4 shrink-0 text-muted-foreground" />
           Logout
         </button>
       </div>

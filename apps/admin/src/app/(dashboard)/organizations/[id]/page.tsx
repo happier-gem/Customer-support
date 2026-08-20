@@ -57,7 +57,7 @@ export default function OrganizationDetailPage() {
   if (status === "loading" || (status === "authenticated" && loading)) {
     return (
               <main className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         </main>
     );
   }
@@ -76,8 +76,8 @@ export default function OrganizationDetailPage() {
           <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">{org.name}</h1>
-            <p className="mt-1 text-xs text-gray-400">{org.id}</p>
+            <h1 className="text-xl font-semibold text-foreground">{org.name}</h1>
+            <p className="mt-1 text-xs text-muted-foreground">{org.id}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className={planBadgeClass(org.plan)}>{org.plan}</span>
@@ -88,34 +88,34 @@ export default function OrganizationDetailPage() {
         {actionError && <p className={errorTextClass}>{actionError}</p>}
 
         <section className={cardClass}>
-          <h2 className="mb-3 text-sm font-semibold text-gray-900">Overview</h2>
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Overview</h2>
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
-              <dt className="text-xs text-gray-500">Timezone</dt>
-              <dd className="text-sm font-medium text-gray-900">{org.timezone}</dd>
+              <dt className="text-xs text-muted-foreground">Timezone</dt>
+              <dd className="text-sm font-medium text-foreground">{org.timezone}</dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Created</dt>
-              <dd className="text-sm font-medium text-gray-900">{new Date(org.createdAt).toLocaleDateString()}</dd>
+              <dt className="text-xs text-muted-foreground">Created</dt>
+              <dd className="text-sm font-medium text-foreground">{new Date(org.createdAt).toLocaleDateString()}</dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Active Members</dt>
-              <dd className="text-sm font-medium text-gray-900">{org.activeMemberCount}</dd>
+              <dt className="text-xs text-muted-foreground">Active Members</dt>
+              <dd className="text-sm font-medium text-foreground">{org.activeMemberCount}</dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Tickets</dt>
-              <dd className="text-sm font-medium text-gray-900">{org.ticketCount}</dd>
+              <dt className="text-xs text-muted-foreground">Tickets</dt>
+              <dd className="text-sm font-medium text-foreground">{org.ticketCount}</dd>
             </div>
             <div>
-              <dt className="text-xs text-gray-500">Feedback Forms</dt>
-              <dd className="text-sm font-medium text-gray-900">{org.feedbackFormCount}</dd>
+              <dt className="text-xs text-muted-foreground">Feedback Forms</dt>
+              <dd className="text-sm font-medium text-foreground">{org.feedbackFormCount}</dd>
             </div>
           </dl>
         </section>
 
         <section className={cardClass}>
-          <h2 className="mb-1 text-sm font-semibold text-gray-900">Platform Actions</h2>
-          <p className="mb-3 text-sm text-gray-500">
+          <h2 className="mb-1 text-sm font-semibold text-foreground">Platform Actions</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
             {org.isSuspended
               ? "This organization is suspended — its users cannot sign in until it is reactivated."
               : "Suspending this organization immediately blocks its users from signing in or refreshing an existing session."}

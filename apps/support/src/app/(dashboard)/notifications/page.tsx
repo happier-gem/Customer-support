@@ -80,7 +80,7 @@ export default function NotificationsPage() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Notifications</h1>
+        <h1 className="text-xl font-semibold text-foreground">Notifications</h1>
         {hasUnread && (
           <button type="button" onClick={handleMarkAllRead} className={secondaryButtonClass}>
             Mark all read
@@ -90,21 +90,21 @@ export default function NotificationsPage() {
 
       {error && <p className={errorTextClass}>{error}</p>}
 
-      <div className={`${cardClass} divide-y divide-gray-100 p-0`}>
+      <div className={`${cardClass} divide-y divide-border p-0`}>
         {loading ? (
-          <p className="px-4 py-8 text-center text-sm text-gray-500">Loading…</p>
+          <p className="px-4 py-8 text-center text-sm text-muted-foreground">Loading…</p>
         ) : notifications.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-gray-500">No notifications yet.</p>
+          <p className="px-4 py-8 text-center text-sm text-muted-foreground">No notifications yet.</p>
         ) : (
           notifications.map((n) => (
-            <div key={n.id} className={`flex items-start gap-3 px-4 py-3 ${n.read ? "" : "bg-blue-50/60"}`}>
+            <div key={n.id} className={`flex items-start gap-3 px-4 py-3 ${n.read ? "" : "bg-info/10"}`}>
               <button type="button" onClick={() => handleClick(n)} className="flex-1 text-left">
                 <div className="flex items-start gap-2">
-                  {!n.read && <span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-blue-600" />}
+                  {!n.read && <span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-info" />}
                   <div className={n.read ? "flex-1 pl-3.5" : "flex-1"}>
-                    <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                    <p className="mt-0.5 text-sm text-gray-600">{n.message}</p>
-                    <p className="mt-1 text-xs text-gray-400">{relativeTime(n.createdAt)}</p>
+                    <p className="text-sm font-medium text-foreground">{n.title}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{n.message}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{relativeTime(n.createdAt)}</p>
                   </div>
                 </div>
               </button>
@@ -112,7 +112,7 @@ export default function NotificationsPage() {
                 type="button"
                 onClick={() => handleDelete(n.id)}
                 aria-label="Delete notification"
-                className="shrink-0 rounded-md p-1.5 text-gray-300 hover:bg-gray-100 hover:text-gray-500"
+                className="shrink-0 rounded-md p-1.5 text-muted-foreground/60 hover:bg-muted hover:text-muted-foreground"
               >
                 ✕
               </button>

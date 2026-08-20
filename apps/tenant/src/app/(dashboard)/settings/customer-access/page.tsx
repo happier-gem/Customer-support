@@ -106,7 +106,7 @@ export default function CustomerAccessPage() {
   if (status === "loading" || loading) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
@@ -118,18 +118,18 @@ export default function CustomerAccessPage() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Customer access</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-xl font-semibold text-foreground">Customer access</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Share this link, code, or QR code so customers can find and join your organization's support portal.
         </p>
       </div>
 
       <section className={`${cardClass} space-y-4`}>
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Status</h2>
+          <h2 className="text-sm font-semibold text-foreground">Status</h2>
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              link.isActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"
+              link.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
             }`}
           >
             {link.isActive ? "Active" : "Revoked"}
@@ -137,12 +137,12 @@ export default function CustomerAccessPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Customer join link</label>
+          <label className="mb-1 block text-sm font-medium text-foreground">Customer join link</label>
           <div className="flex items-center gap-2">
             <input
               readOnly
               value={link.joinUrl}
-              className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+              className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground"
             />
             <button type="button" onClick={handleCopy} className={secondaryButtonClass}>
               {copied ? "Copied!" : "Copy link"}
@@ -151,9 +151,9 @@ export default function CustomerAccessPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Organization code</label>
-          <p className="text-2xl font-semibold tracking-widest text-gray-900">{link.code}</p>
-          <p className="mt-1 text-xs text-gray-400">Customers can type this code manually if they can't use the link or QR code.</p>
+          <label className="mb-1 block text-sm font-medium text-foreground">Organization code</label>
+          <p className="text-2xl font-semibold tracking-widest text-foreground">{link.code}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Customers can type this code manually if they can't use the link or QR code.</p>
         </div>
 
         {error && <p className={errorTextClass}>{error}</p>}
@@ -172,9 +172,9 @@ export default function CustomerAccessPage() {
       </section>
 
       <section className={`${cardClass} space-y-4`}>
-        <h2 className="text-sm font-semibold text-gray-900">QR code</h2>
-        <p className="text-sm text-gray-500">Print this or display it wherever customers can scan it with their phone.</p>
-        <div className="flex justify-center rounded-lg border border-gray-200 bg-white p-6">
+        <h2 className="text-sm font-semibold text-foreground">QR code</h2>
+        <p className="text-sm text-muted-foreground">Print this or display it wherever customers can scan it with their phone.</p>
+        <div className="flex justify-center rounded-lg border border-border bg-card p-6">
           <QRCodeCanvas ref={qrRef} value={link.joinUrl} size={220} level="M" includeMargin />
         </div>
         <button type="button" onClick={handleDownloadQr} className={buttonClass}>

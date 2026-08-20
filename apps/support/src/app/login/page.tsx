@@ -53,7 +53,7 @@ export default function LoginPage() {
             <label htmlFor="password" className={labelClass}>
               Password
             </label>
-            <Link href="/forgot-password" className="mb-1 text-xs text-gray-500 hover:text-gray-700">
+            <Link href="/forgot-password" className="mb-1 text-xs text-muted-foreground hover:text-foreground">
               Forgot password?
             </Link>
           </div>
@@ -70,7 +70,7 @@ export default function LoginPage() {
           {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>
-      <p className="text-center text-xs text-gray-400">
+      <p className="text-center text-xs text-muted-foreground">
         Accounts are created by your organization&apos;s owner via a team invitation.
       </p>
     </AuthCard>

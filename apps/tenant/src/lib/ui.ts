@@ -1,51 +1,59 @@
 export const inputClass =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+  "w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring";
 
 export const buttonClass =
-  "w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50";
 
-export const labelClass = "mb-1 block text-sm font-medium text-gray-700";
+export const labelClass = "mb-1 block text-sm font-medium text-foreground/80";
 
-export const linkClass = "font-medium text-indigo-600 underline underline-offset-2 hover:text-indigo-800";
+export const linkClass = "font-medium text-primary underline underline-offset-2 hover:text-primary/80";
 
-export const errorTextClass = "rounded-md bg-red-50 px-3 py-2 text-sm text-red-700";
+export const errorTextClass = "rounded-md bg-danger/10 px-3 py-2 text-sm text-danger";
 
-export const successTextClass = "rounded-md bg-green-50 px-3 py-2 text-sm text-green-700";
+export const successTextClass = "rounded-md bg-success/10 px-3 py-2 text-sm text-success";
 
 export const selectClass =
-  "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+  "w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring";
 
 export const secondaryButtonClass =
-  "rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-ring/40 hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50";
 
 export const dangerButtonClass =
-  "rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-md border border-danger/30 bg-card px-3 py-1.5 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50";
 
-export const cardClass = "rounded-xl border border-gray-200 bg-white p-6 shadow-sm";
+export const cardClass = "rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm";
+
+/** Dynamic initials for an org/user avatar fallback, e.g. "ABC Technologies" -> "AT". */
+export function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
-  OPEN: "bg-indigo-50 text-indigo-700",
-  IN_PROGRESS: "bg-amber-50 text-amber-700",
+  OPEN: "bg-info/10 text-info",
+  IN_PROGRESS: "bg-warning/10 text-warning",
   WAITING_FOR_CUSTOMER: "bg-purple-50 text-purple-700",
-  RESOLVED: "bg-emerald-50 text-emerald-700",
-  CLOSED: "bg-gray-100 text-gray-600",
-  ACTIVE: "bg-emerald-50 text-emerald-700",
-  INACTIVE: "bg-gray-100 text-gray-600",
+  RESOLVED: "bg-success/10 text-success",
+  CLOSED: "bg-muted text-muted-foreground",
+  ACTIVE: "bg-success/10 text-success",
+  INACTIVE: "bg-muted text-muted-foreground",
 };
 
 const PRIORITY_BADGE_CLASSES: Record<string, string> = {
-  LOW: "bg-gray-100 text-gray-600",
-  MEDIUM: "bg-blue-50 text-blue-700",
-  HIGH: "bg-orange-50 text-orange-700",
-  URGENT: "bg-red-50 text-red-700",
+  LOW: "bg-muted text-muted-foreground",
+  MEDIUM: "bg-info/10 text-info",
+  HIGH: "bg-warning/10 text-warning",
+  URGENT: "bg-danger/10 text-danger",
 };
 
 export function statusBadgeClass(status: string): string {
-  return `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASSES[status] ?? "bg-gray-100 text-gray-600"}`;
+  return `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASSES[status] ?? "bg-muted text-muted-foreground"}`;
 }
 
 export function priorityBadgeClass(priority: string): string {
-  return `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PRIORITY_BADGE_CLASSES[priority] ?? "bg-gray-100 text-gray-600"}`;
+  return `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PRIORITY_BADGE_CLASSES[priority] ?? "bg-muted text-muted-foreground"}`;
 }
 
 export function formatStatusLabel(status: string): string {

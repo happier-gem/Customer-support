@@ -55,17 +55,17 @@ export default function SecuritySettingsPage() {
   if (status === "loading" || !user) {
     return (
       <main className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </main>
     );
   }
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8">
-      <h1 className="text-xl font-semibold text-gray-900">Security</h1>
+      <h1 className="text-xl font-semibold text-foreground">Security</h1>
 
       <form onSubmit={handleChangePassword} className={`${cardClass} space-y-4`}>
-        <h2 className="text-sm font-semibold text-gray-900">Change password</h2>
+        <h2 className="text-sm font-semibold text-foreground">Change password</h2>
         <div>
           <label htmlFor="currentPassword" className={labelClass}>
             Current password
@@ -110,8 +110,8 @@ export default function SecuritySettingsPage() {
       </form>
 
       <section className={`${cardClass} space-y-4`}>
-        <h2 className="text-sm font-semibold text-gray-900">Session</h2>
-        <p className="text-sm text-gray-500">Sign out of your account on this device.</p>
+        <h2 className="text-sm font-semibold text-foreground">Session</h2>
+        <p className="text-sm text-muted-foreground">Sign out of your account on this device.</p>
         <button type="button" onClick={handleLogout} className={secondaryButtonClass}>
           Log out
         </button>
