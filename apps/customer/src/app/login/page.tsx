@@ -54,7 +54,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthCard title="Sign in" subtitle="Welcome back to the support portal.">
+    <AuthCard title="Sign in" subtitle="Welcome back to the customer portal.">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className={labelClass}>

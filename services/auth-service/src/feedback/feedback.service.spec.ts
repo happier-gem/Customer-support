@@ -161,20 +161,27 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
       await expect(service.deleteForm(ownerA, formB.id)).rejects.toThrow(NotFoundException);
     });
 
-    it('5. support agent cannot create a form (feedback is tenant-owner-only)', async () => {
-      await expect(service.createForm(agentA, { title: 'Agent survey' })).rejects.toThrow(ForbiddenException);
+    it('5. support agent can create a form (full parity with tenant owner)', async () => {
+      await expect(service.createForm(agentA, { title: 'Agent survey' })).resolves.toMatchObject({ title: 'Agent survey' });
     });
 
-    it('support agent cannot update or delete a form', async () => {
-      const form = await service.createForm(ownerA, { title: 'Survey' });
-      await expect(service.updateForm(agentA, form.id, { title: 'Changed' })).rejects.toThrow(ForbiddenException);
-      await expect(service.deleteForm(agentA, form.id)).rejects.toThrow(ForbiddenException);
+    it('support agent can update, activate, and delete a form', async () => {
+      const form = await service.createForm(agentA, { title: 'Survey' });
+      await expect(service.updateForm(agentA, form.id, { title: 'Changed' })).resolves.toMatchObject({ title: 'Changed' });
+      await expect(service.deleteForm(agentA, form.id)).resolves.toBeUndefined();
     });
 
-    it('support agent cannot even view a form', async () => {
+    it('support agent can view and list forms', async () => {
       const form = await service.createForm(ownerA, { title: 'Survey' });
-      await expect(service.getFormById(agentA, form.id)).rejects.toThrow(ForbiddenException);
-      await expect(service.listForms(agentA, {})).rejects.toThrow(ForbiddenException);
+      await expect(service.getFormById(agentA, form.id)).resolves.toMatchObject({ id: form.id });
+      const list = await service.listForms(agentA, {});
+      expect(list.data.some((f) => f.id === form.id)).toBe(true);
+    });
+
+    it('support agent cannot manage another tenant’s form (cross-tenant isolation still applies)', async () => {
+      const formB = await service.createForm(ownerB, { title: 'Org B survey' });
+      await expect(service.updateForm(agentA, formB.id, { title: 'Hijacked' })).rejects.toThrow(NotFoundException);
+      await expect(service.deleteForm(agentA, formB.id)).rejects.toThrow(NotFoundException);
     });
 
     it('6. customer cannot create a form', async () => {
@@ -439,7 +446,7 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
       expect(response.anonymous).toBe(true);
     });
 
-    it('21. an anonymous response does not expose the customer’s identity to the tenant owner (and an agent has no access to it at all)', async () => {
+    it('21. an anonymous response does not expose the customer’s identity to the tenant owner or support agent', async () => {
       const { form, ratingQuestion } = await createActiveForm(ownerA);
       const response = await service.submitResponse(customerA, form.id, {
         anonymous: true,
@@ -447,11 +454,12 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
       });
 
       const viaGetOwner = await service.getResponseById(ownerA, response.id);
+      const viaGetAgent = await service.getResponseById(agentA, response.id);
       const viaList = await service.listResponses(ownerA, form.id, {});
 
       expect(viaGetOwner.customer).toBeNull();
+      expect(viaGetAgent.customer).toBeNull();
       expect(viaList.data.find((r) => r.id === response.id)?.customer).toBeNull();
-      await expect(service.getResponseById(agentA, response.id)).rejects.toThrow(ForbiddenException);
     });
 
     it('22. an anonymous response remains correctly tenant-scoped (still not visible cross-tenant)', async () => {
@@ -461,8 +469,8 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
         answers: [{ questionId: ratingQuestion.id, ratingValue: 5 }],
       });
       await expect(service.getResponseById(ownerB, response.id)).rejects.toThrow(NotFoundException);
-      // An agent is rejected before tenant-scoping is even evaluated — no feedback access at all, same org or not.
-      await expect(service.getResponseById(agentB, response.id)).rejects.toThrow(ForbiddenException);
+      // An agent in a different org is scoped out the same way an owner would be.
+      await expect(service.getResponseById(agentB, response.id)).rejects.toThrow(NotFoundException);
     });
 
     it('23. no endpoint lets a tenant owner bypass the anonymous flag to recover identity', async () => {
@@ -526,11 +534,12 @@ describe('FeedbackService (integration — tenant isolation + RBAC)', () => {
       await expect(service.getResponseById(customerA2, response.id)).rejects.toThrow(NotFoundException);
     });
 
-    it('28. a support agent has no feedback access at all — not even in their own organization', async () => {
+    it('28. a support agent has full access to feedback responses within their own organization', async () => {
       const { form: formA, ratingQuestion } = await createActiveForm(ownerA);
       const response = await service.submitResponse(customerA, formA.id, { answers: [{ questionId: ratingQuestion.id, ratingValue: 5 }] });
-      await expect(service.getResponseById(agentA, response.id)).rejects.toThrow(ForbiddenException);
-      await expect(service.listResponses(agentA, formA.id, {})).rejects.toThrow(ForbiddenException);
+      await expect(service.getResponseById(agentA, response.id)).resolves.toMatchObject({ id: response.id });
+      const list = await service.listResponses(agentA, formA.id, {});
+      expect(list.data.some((r) => r.id === response.id)).toBe(true);
     });
 
     it('a customer cannot list a form’s responses at all (list is owner/agent-only, not just filtered)', async () => {

@@ -280,7 +280,7 @@ describe('Notification creation (integration — real business events)', () => {
   // Feedback
   // ---------------------------------------------------------------------
   describe('feedback', () => {
-    it('a submitted response notifies the tenant owner only — feedback is tenant-owner-only, so a support agent is never notified', async () => {
+    it('a submitted response notifies the tenant owner and support agents (both manage feedback), never other customers', async () => {
       const otherCustomer = await mkUser(orgA.id, 'Other Customer', ROLES.CUSTOMER);
       const form = await prisma.feedbackForm.create({
         data: { organizationId: orgA.id, createdById: ownerA.id, title: 'Survey', status: 'ACTIVE' },
@@ -295,7 +295,7 @@ describe('Notification creation (integration — real business events)', () => {
         true,
       );
       expect((await notifications.list(agentACtx, {})).data.some((n) => n.type === NOTIFICATION_TYPES.FEEDBACK_SUBMITTED)).toBe(
-        false,
+        true,
       );
       expect((await notifications.list(ctx(otherCustomer, orgA.id, ROLES.CUSTOMER), {})).data).toHaveLength(0);
     });

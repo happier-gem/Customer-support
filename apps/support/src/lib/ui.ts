@@ -18,6 +18,9 @@ export const selectClass =
 export const secondaryButtonClass =
   "rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-ring/40 hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50";
 
+export const dangerButtonClass =
+  "rounded-md border border-danger/30 bg-card px-3 py-1.5 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50";
+
 export const cardClass = "rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm";
 
 /** Dynamic initials for an org/user avatar fallback, e.g. "ABC Technologies" -> "AT". */
