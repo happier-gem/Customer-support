@@ -135,7 +135,7 @@ export default function DashboardPage() {
                   </dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-gray-500">Feedback forms</dt>
+                  <dt className="text-gray-500">Questionnaires</dt>
                   <dd className="text-gray-900">
                     {subscription.usage.feedbackForms}
                     {subscription.limits.feedbackForms !== null ? ` / ${subscription.limits.feedbackForms}` : ""}
@@ -153,7 +153,7 @@ export default function DashboardPage() {
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/feedback" className="font-medium text-gray-700 hover:text-gray-900">
-                  Feedback forms
+                  Questionnaires
                 </Link>
               </li>
               <li>

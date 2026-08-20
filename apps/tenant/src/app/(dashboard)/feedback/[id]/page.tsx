@@ -121,7 +121,7 @@ export default function FeedbackFormBuilderPage() {
     if (!accessToken) return;
     await runAction(
       () => api.updateFeedbackForm(accessToken, params.id, { title: titleDraft, description: descriptionDraft, category: categoryDraft }),
-      "Form updated.",
+      "Questionnaire updated.",
     );
     setEditingDetails(false);
   }
@@ -182,7 +182,7 @@ export default function FeedbackFormBuilderPage() {
   if (error || !form) {
     return (
               <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-          <p className={errorTextClass}>{error ?? "Feedback form not found."}</p>
+          <p className={errorTextClass}>{error ?? "Questionnaire not found."}</p>
         </main>
     );
   }
@@ -239,7 +239,7 @@ export default function FeedbackFormBuilderPage() {
               <button
                 disabled={busy || form.questions.length === 0}
                 title={form.questions.length === 0 ? "Add at least one question before activating" : undefined}
-                onClick={() => runAction(() => api.updateFeedbackFormStatus(accessToken!, form.id, "ACTIVE"), "Form activated.")}
+                onClick={() => runAction(() => api.updateFeedbackFormStatus(accessToken!, form.id, "ACTIVE"), "Questionnaire activated.")}
                 className={`${buttonClass} w-auto! px-4`}
               >
                 Activate
@@ -247,7 +247,7 @@ export default function FeedbackFormBuilderPage() {
             ) : (
               <button
                 disabled={busy}
-                onClick={() => runAction(() => api.updateFeedbackFormStatus(accessToken!, form.id, "INACTIVE"), "Form deactivated.")}
+                onClick={() => runAction(() => api.updateFeedbackFormStatus(accessToken!, form.id, "INACTIVE"), "Questionnaire deactivated.")}
                 className={`${secondaryButtonClass} w-auto`}
               >
                 Deactivate
@@ -265,7 +265,7 @@ export default function FeedbackFormBuilderPage() {
                 }}
                 className={`${dangerButtonClass} w-auto`}
               >
-                Delete form
+                Delete questionnaire
               </button>
             )}
           </div>
@@ -435,7 +435,7 @@ export default function FeedbackFormBuilderPage() {
         </div>
 
         <button onClick={() => router.push("/feedback")} className={`${secondaryButtonClass} w-auto`}>
-          Back to feedback forms
+          Back to questionnaires
         </button>
       </main>
   );

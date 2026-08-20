@@ -58,7 +58,7 @@ export function OtpInput({
           onChange={(e) => handleChange(i, e)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
-          className="h-12 w-10 rounded-md border border-gray-300 text-center text-lg font-semibold text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-12 w-10 rounded-md border border-gray-300 text-center text-lg font-semibold text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={`Verification code digit ${i + 1}`}
         />
       ))}

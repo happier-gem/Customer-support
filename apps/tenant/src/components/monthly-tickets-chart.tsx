@@ -37,7 +37,7 @@ export function MonthlyTicketsChart({ data }: { data: MonthlyTicketCount[] }) {
               onMouseLeave={() => setHovered(null)}
             >
               {isHovered && (
-                <div className="absolute -top-7 z-10 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white shadow-sm">
+                <div className="absolute -top-7 z-10 whitespace-nowrap rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white shadow-sm">
                   {d.month}: {d.count}
                 </div>
               )}

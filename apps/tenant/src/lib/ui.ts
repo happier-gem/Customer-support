@@ -1,22 +1,22 @@
 export const inputClass =
-  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900";
+  "w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 
 export const buttonClass =
-  "w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const labelClass = "mb-1 block text-sm font-medium text-gray-700";
 
-export const linkClass = "font-medium text-gray-900 underline underline-offset-2 hover:text-gray-700";
+export const linkClass = "font-medium text-indigo-600 underline underline-offset-2 hover:text-indigo-800";
 
 export const errorTextClass = "rounded-md bg-red-50 px-3 py-2 text-sm text-red-700";
 
 export const successTextClass = "rounded-md bg-green-50 px-3 py-2 text-sm text-green-700";
 
 export const selectClass =
-  "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900";
+  "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 
 export const secondaryButtonClass =
-  "rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const dangerButtonClass =
   "rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50";
@@ -24,12 +24,12 @@ export const dangerButtonClass =
 export const cardClass = "rounded-xl border border-gray-200 bg-white p-6 shadow-sm";
 
 const STATUS_BADGE_CLASSES: Record<string, string> = {
-  OPEN: "bg-blue-50 text-blue-700",
+  OPEN: "bg-indigo-50 text-indigo-700",
   IN_PROGRESS: "bg-amber-50 text-amber-700",
   WAITING_FOR_CUSTOMER: "bg-purple-50 text-purple-700",
-  RESOLVED: "bg-green-50 text-green-700",
+  RESOLVED: "bg-emerald-50 text-emerald-700",
   CLOSED: "bg-gray-100 text-gray-600",
-  ACTIVE: "bg-green-50 text-green-700",
+  ACTIVE: "bg-emerald-50 text-emerald-700",
   INACTIVE: "bg-gray-100 text-gray-600",
 };
 

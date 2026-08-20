@@ -13,10 +13,10 @@ function formatLimit(value: number | null): string {
 }
 
 function usageBarClass(usage: number, limit: number | null): string {
-  if (limit === null) return "bg-gray-900";
+  if (limit === null) return "bg-indigo-600";
   if (usage >= limit) return "bg-red-500";
   if (usage / limit >= 0.8) return "bg-amber-500";
-  return "bg-gray-900";
+  return "bg-indigo-600";
 }
 
 function UsageRow({ label, usage, limit }: { label: string; usage: number; limit: number | null }) {
@@ -117,12 +117,12 @@ export default function SubscriptionSettingsPage() {
         <section className={`${cardClass} space-y-4`}>
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Current plan</h2>
-            <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-medium text-white">{subscription.plan}</span>
+            <span className="rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-medium text-white">{subscription.plan}</span>
           </div>
           <div className="space-y-3">
             <UsageRow label="Team members" usage={subscription.usage.teamMembers} limit={subscription.limits.teamMembers} />
             <UsageRow label="Tickets this month" usage={subscription.usage.monthlyTickets} limit={subscription.limits.monthlyTickets} />
-            <UsageRow label="Feedback forms" usage={subscription.usage.feedbackForms} limit={subscription.limits.feedbackForms} />
+            <UsageRow label="Questionnaires" usage={subscription.usage.feedbackForms} limit={subscription.limits.feedbackForms} />
           </div>
           {changeError && <p className={errorTextClass}>{changeError}</p>}
           {changeSuccess && <p className={successTextClass}>{changeSuccess}</p>}
@@ -138,7 +138,7 @@ export default function SubscriptionSettingsPage() {
               const planIndex = PLAN_ORDER.indexOf(plan.plan);
               const action = isCurrent ? "current" : planIndex > currentIndex ? "upgrade" : "downgrade";
               return (
-                <div key={plan.plan} className={`${cardClass} flex flex-col gap-4 ${isCurrent ? "ring-2 ring-gray-900" : ""}`}>
+                <div key={plan.plan} className={`${cardClass} flex flex-col gap-4 ${isCurrent ? "ring-2 ring-indigo-500" : ""}`}>
                   <div>
                     <h3 className="text-base font-semibold text-gray-900">{plan.plan}</h3>
                   </div>

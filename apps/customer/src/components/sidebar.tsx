@@ -7,9 +7,9 @@ import {
   Bell,
   ChevronsLeft,
   ChevronsRight,
+  ClipboardList,
   LayoutDashboard,
   Menu,
-  MessageSquare,
   Ticket,
   X,
 } from "lucide-react";
@@ -30,7 +30,7 @@ interface NavItem {
 const ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tickets", label: "My Tickets", icon: Ticket },
-  { href: "/feedback", label: "Feedback", icon: MessageSquare },
+  { href: "/feedback", label: "Questionnaires", icon: ClipboardList },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 
@@ -50,7 +50,7 @@ export function Sidebar() {
   const body = (
     <>
       <div className={`flex items-center gap-2 border-b border-gray-200 px-4 py-4 ${collapsed ? "justify-center" : ""}`}>
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-900 text-sm font-semibold text-white">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-blue-600 text-sm font-semibold text-white shadow-sm">
           C
         </div>
         {!collapsed && <span className="truncate text-sm font-semibold text-gray-900">Customer Portal</span>}
@@ -67,7 +67,7 @@ export function Sidebar() {
               onClick={() => setMobileOpen(false)}
               title={collapsed ? item.label : undefined}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                active ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                active ? "bg-indigo-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"
               } ${collapsed ? "justify-center" : ""}`}
             >
               <Icon className="h-4 w-4 shrink-0" />

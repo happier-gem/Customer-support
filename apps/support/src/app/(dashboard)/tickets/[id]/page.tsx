@@ -318,7 +318,7 @@ export default function TicketDetailPage() {
                 const isMine = m.author.id === user.id;
                 return (
                   <li key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isMine ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
+                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isMine ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-900"}`}>
                       {!isMine && <p className="text-xs font-medium text-gray-500">{m.author.name}</p>}
                       <p className="whitespace-pre-wrap text-sm">{m.body}</p>
                       <p className={`mt-1 text-xs ${isMine ? "text-gray-300" : "text-gray-400"}`}>

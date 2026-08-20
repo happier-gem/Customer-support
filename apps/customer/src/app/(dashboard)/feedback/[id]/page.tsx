@@ -31,7 +31,7 @@ export default function CustomerFeedbackFormPage() {
       const detail = await api.getFeedbackForm(accessToken, params.id);
       setForm(detail);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "This feedback form isn't available.");
+      setError(err instanceof ApiError ? err.message : "This questionnaire isn't available.");
     } finally {
       setLoading(false);
     }
@@ -80,9 +80,9 @@ export default function CustomerFeedbackFormPage() {
   if (error || !form) {
     return (
               <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
-          <p className={errorTextClass}>{error ?? "This feedback form isn't available."}</p>
+          <p className={errorTextClass}>{error ?? "This questionnaire isn't available."}</p>
           <button onClick={() => router.push("/feedback")} className={`${secondaryButtonClass} mt-4 w-auto`}>
-            Back to feedback
+            Back to questionnaires
           </button>
         </main>
     );
@@ -92,9 +92,9 @@ export default function CustomerFeedbackFormPage() {
     return (
               <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
           <div className={`${cardClass} space-y-3 text-center`}>
-            <p className={successTextClass}>Thank you — your feedback has been submitted.</p>
+            <p className={successTextClass}>Thank you — your response has been submitted.</p>
             <button onClick={() => router.push("/feedback")} className={`${buttonClass} w-auto! px-4`}>
-              Back to feedback
+              Back to questionnaires
             </button>
           </div>
         </main>
@@ -124,7 +124,7 @@ export default function CustomerFeedbackFormPage() {
                       onClick={() => setRatings((prev) => ({ ...prev, [question.id]: value }))}
                       className={`h-10 w-10 rounded-md border text-sm font-medium transition-colors ${
                         ratings[question.id] === value
-                          ? "border-gray-900 bg-gray-900 text-white"
+                          ? "border-indigo-600 bg-indigo-600 text-white"
                           : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                       }`}
                     >
@@ -152,7 +152,7 @@ export default function CustomerFeedbackFormPage() {
 
           {submitError && <p className={errorTextClass}>{submitError}</p>}
           <button disabled={submitting} onClick={handleSubmit} className={buttonClass}>
-            {submitting ? "Submitting…" : "Submit feedback"}
+            {submitting ? "Submitting…" : "Submit response"}
           </button>
         </div>
       </main>

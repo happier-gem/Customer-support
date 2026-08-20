@@ -47,7 +47,7 @@ export default function CustomerFeedbackPage() {
 
   return (
           <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 px-4 py-8">
-        <h1 className="text-xl font-semibold text-gray-900">Feedback</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Questionnaires</h1>
 
         {error && <p className={errorTextClass}>{error}</p>}
 
@@ -55,7 +55,7 @@ export default function CustomerFeedbackPage() {
           <p className="text-sm text-gray-500">Loading…</p>
         ) : !result || result.data.length === 0 ? (
           <div className={cardClass}>
-            <p className="text-sm text-gray-500">There are no feedback forms available right now.</p>
+            <p className="text-sm text-gray-500">There are no questionnaires available right now.</p>
           </div>
         ) : (
           <ul className="space-y-3">

@@ -52,9 +52,9 @@ export default function FeedbackFormsPage() {
   return (
           <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">Feedback Forms</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Questionnaires</h1>
           <Link href="/feedback/new" className={`${buttonClass} w-auto! px-4`}>
-            New form
+            New Questionnaire
           </Link>
         </div>
 
@@ -82,7 +82,7 @@ export default function FeedbackFormsPage() {
           {loading ? (
             <p className="text-sm text-gray-500">Loading…</p>
           ) : !result || result.data.length === 0 ? (
-            <p className="text-sm text-gray-500">No feedback forms yet. Create one to start collecting responses.</p>
+            <p className="text-sm text-gray-500">No questionnaires yet. Create one to start collecting responses from customers.</p>
           ) : (
             <table className="w-full text-left text-sm">
               <thead>

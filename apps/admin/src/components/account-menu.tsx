@@ -82,7 +82,7 @@ export function AccountMenu({ user, collapsed, onNavigate }: AccountMenuProps) {
           collapsed ? "justify-center" : ""
         }`}
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-900 text-sm font-semibold text-white">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 text-sm font-semibold text-white">
           {user.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={`${API_BASE}${user.avatarUrl}`} alt="" className="h-full w-full object-cover" />
