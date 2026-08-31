@@ -49,10 +49,18 @@ export class AuthController {
   ) {}
 
   private setRefreshCookie(res: Response, refreshToken: string) {
+    // Dev: frontend and gateway share a hostname (localhost or a LAN IP —
+    // see apps/customer/src/lib/api.ts), so the request is same-site and
+    // SameSite=Lax works over plain HTTP. In production the frontend
+    // (Vercel) and gateway (Railway) are genuinely different domains, so
+    // every API call is cross-site — SameSite=None is required for the
+    // browser to send the cookie at all, which in turn requires Secure
+    // (HTTPS-only), satisfied by both platforms.
+    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
     res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
       httpOnly: true,
-      secure: this.config.get<string>('NODE_ENV') === 'production',
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       path: '/auth',
       maxAge: parseDurationMs(this.config.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d'),
     });
