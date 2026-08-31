@@ -24,6 +24,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // The inline script below reads localStorage and sets data-theme on
+      // this element before React hydrates, so a returning visitor's saved
+      // theme choice can differ from the attribute-less markup the server
+      // sent (the server has no access to the browser's localStorage).
+      // That's a real, unavoidable client/server difference for this
+      // "no flash of wrong theme" pattern (the same tradeoff next-themes
+      // documents), not a bug — suppressHydrationWarning only silences the
+      // warning for this element's own attributes, it does not disable
+      // hydration mismatch checking for its children.
+      suppressHydrationWarning
     >
       <head>
         {/* Applies a previously-saved theme choice before first paint, so there's no flash of the wrong theme. No stored value = follow the OS preference (handled purely in CSS). */}
@@ -34,7 +44,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      {/* Browser extensions (Grammarly, session recorders, etc.) inject their
+          own attributes into <body> (and sometimes <html>) directly in the
+          live DOM, before/while React hydrates. The server never sees them,
+          so React reports them as a mismatch even though the app rendered
+          identically on both sides — a documented Next.js hydration-warning
+          cause (see https://nextjs.org/docs/messages/react-hydration-error),
+          not something app code can fix or should reproduce. Scoped to this
+          element only. */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <AuthProvider>
           <OrganizationProvider>{children}</OrganizationProvider>
         </AuthProvider>

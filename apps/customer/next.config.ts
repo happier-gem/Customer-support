@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   // its own JS/font requests get silently blocked. Update this IP if the
   // machine's LAN address changes — see CUSTOMER_APP_URL in
   // services/auth-service/.env for the matching note.
-  allowedDevOrigins: ["192.168.8.123"],
+  allowedDevOrigins: ["192.168.9.7"],
 };
 
 export default nextConfig;

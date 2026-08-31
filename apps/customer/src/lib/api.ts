@@ -1,4 +1,20 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// The gateway sets the refresh-token cookie as SameSite=Lax, scoped to
+// whatever host issued it. A single fixed NEXT_PUBLIC_API_URL can only ever
+// match one page origin (e.g. only "localhost" or only a LAN IP, never
+// both) — whichever origin it doesn't match makes every API call cross-site,
+// so the browser silently drops the Lax cookie and the session fails to
+// survive a reload. Deriving the API host from the page's own hostname at
+// request time keeps API calls same-site regardless of whether the app is
+// opened via localhost or a LAN IP, so the cookie always round-trips.
+// NEXT_PUBLIC_API_URL remains available as an explicit override for setups
+// where the API genuinely lives on a different domain (e.g. production).
+function resolveApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== "undefined") return `${window.location.protocol}//${window.location.hostname}:4000`;
+  return "http://localhost:4000";
+}
+
+export const API_BASE = resolveApiBase();
 
 export class ApiError extends Error {
   constructor(
