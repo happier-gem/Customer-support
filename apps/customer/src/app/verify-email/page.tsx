@@ -14,6 +14,11 @@ function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
+  // Set by the join page when the backend reported the verification email
+  // did NOT actually send (see api.registerCustomer's emailSent field) —
+  // the account still exists, but this page must not claim a code is
+  // waiting in an inbox that never received one.
+  const initialSendFailed = searchParams.get("emailSent") === "0";
 
   const [otp, setOtp] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -22,7 +27,10 @@ function VerifyEmailContent() {
 
   const [resending, setResending] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(email ? RESEND_COOLDOWN_SECONDS : 0);
+  // No cooldown when the initial send already failed — there's no recent
+  // successful send to protect against being spammed, and making someone
+  // wait 60s to recover from a failure that wasn't their fault is just bad UX.
+  const [cooldown, setCooldown] = useState(email && !initialSendFailed ? RESEND_COOLDOWN_SECONDS : 0);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -53,7 +61,7 @@ function VerifyEmailContent() {
       const res = await api.resendOtp(email);
       setOtp("");
       setCooldown(res.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS);
-      setResendMessage("A new code has been sent to your email.");
+      setResendMessage(res.message);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -84,8 +92,22 @@ function VerifyEmailContent() {
   }
 
   return (
-    <AuthCard title="Verify your email" subtitle={`Enter the 6-digit code we sent to ${email}.`}>
+    <AuthCard
+      title="Verify your email"
+      subtitle={
+        initialSendFailed
+          ? `We couldn't send a verification code to ${email}.`
+          : `Enter the 6-digit code we sent to ${email}.`
+      }
+    >
       <div className="space-y-4">
+        {initialSendFailed && !resendMessage && (
+          <p className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+            Your account was created, but the verification email failed to send. Click &quot;Resend code&quot;
+            below to try again.
+          </p>
+        )}
+
         <OtpInput value={otp} onChange={setOtp} disabled={verifying} />
 
         {error && <p className={errorTextClass}>{error}</p>}

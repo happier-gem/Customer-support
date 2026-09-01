@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -30,6 +31,13 @@ import {
   TokenPair,
 } from '@app/shared';
 import { generateSecureToken, generateOtp, hashToken, safeCompareHex } from './utils/token.util';
+
+/** e.g. "jane.doe@example.com" -> "ja***@example.com" — safe for logs. */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  return `${local.slice(0, 2)}***@${domain}`;
+}
 
 function toPublicUser(user: User): PublicUser {
   return {
@@ -60,6 +68,8 @@ const GENERIC_RESEND_MESSAGE = 'If that account needs verification, a new code h
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -106,7 +116,9 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async register(dto: RegisterDto): Promise<{ message: string; organizationId: string; userId: string }> {
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ message: string; organizationId: string; userId: string; emailSent: boolean }> {
     const email = dto.email.trim().toLowerCase();
 
     const existing = await this.prisma.user.findUnique({ where: { email } });
@@ -164,19 +176,21 @@ export class AuthService {
       throw err;
     }
 
-    // Fire-and-forget: MailService.sendMail() never rejects — it's already a
-    // best-effort side channel that swallows and logs its own errors (see
-    // mail.service.ts) — so awaiting it here buys no correctness and only
-    // risks this RPC response exceeding the gateway's fixed CALL_TIMEOUT_MS
-    // (8s, see auth-gateway.service.ts) on a slow SMTP round-trip. The
-    // account is already committed above regardless of how long the email
-    // takes to actually leave.
-    void this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim() });
+    this.logger.log(`Registration OTP generated and saved for ${maskEmail(email)}`);
+
+    // Awaited: the account above is committed either way (a transient email
+    // failure must not undo a valid registration), but the response must not
+    // claim the code was emailed when the provider actually rejected it —
+    // see MailService.sendMail's return value.
+    const emailSent = await this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim() });
 
     return {
-      message: 'Registration successful. Please check your email for a verification code.',
+      message: emailSent
+        ? 'Registration successful. Please check your email for a verification code.'
+        : 'Registration successful, but we were unable to send the verification email. Use "Resend code" on the next screen to try again.',
       organizationId,
       userId,
+      emailSent,
     };
   }
 
@@ -189,12 +203,15 @@ export class AuthService {
    * resendOtp() so retried registration submissions can't be used to spam
    * the mailbox.
    */
-  private async reissueRegistrationOtp(user: User): Promise<{ message: string; organizationId: string; userId: string }> {
+  private async reissueRegistrationOtp(
+    user: User,
+  ): Promise<{ message: string; organizationId: string; userId: string; emailSent: boolean }> {
     const now = new Date();
     const withinCooldown =
       user.emailVerificationOtpLastSentAt &&
       (now.getTime() - user.emailVerificationOtpLastSentAt.getTime()) / 1000 < OTP_RESEND_COOLDOWN_SECONDS;
 
+    let emailSent = false;
     if (!withinCooldown) {
       const otp = generateOtp();
       await this.prisma.user.update({
@@ -206,14 +223,19 @@ export class AuthService {
           emailVerificationOtpLastSentAt: now,
         },
       });
-      void this.mail.sendOtpEmail(user.email, otp, { recipientName: user.name });
+      this.logger.log(`Registration OTP re-issued and saved for ${maskEmail(user.email)}`);
+      emailSent = await this.mail.sendOtpEmail(user.email, otp, { recipientName: user.name });
     }
 
     return {
-      message:
-        'An account with this email already exists but has not been verified. We have sent a new verification code.',
+      message: withinCooldown
+        ? 'An account with this email already exists but has not been verified. A verification code was already sent recently — check your email, or wait before requesting another.'
+        : emailSent
+          ? 'An account with this email already exists but has not been verified. We have sent a new verification code.'
+          : 'An account with this email already exists but has not been verified, and we were unable to send a new verification code. Use "Resend code" on the next screen to try again.',
       organizationId: user.organizationId,
       userId: user.id,
+      emailSent,
     };
   }
 
@@ -223,7 +245,9 @@ export class AuthService {
    * the created account's role is always CUSTOMER, hardcoded here rather
    * than accepted from the client.
    */
-  async registerCustomer(dto: RegisterCustomerDto): Promise<{ message: string; organizationId: string; userId: string }> {
+  async registerCustomer(
+    dto: RegisterCustomerDto,
+  ): Promise<{ message: string; organizationId: string; userId: string; emailSent: boolean }> {
     const email = dto.email.trim().toLowerCase();
 
     // Phase 10: the organization is resolved server-side from the tenant's
@@ -281,13 +305,21 @@ export class AuthService {
       throw err;
     }
 
-    // Fire-and-forget — see the identical comment in register() above.
-    void this.mail.sendOtpEmail(email, otp, { recipientName: dto.name.trim(), organizationName: organization.name });
+    this.logger.log(`Registration OTP generated and saved for ${maskEmail(email)}`);
+
+    // Awaited — see the identical comment in register() above.
+    const emailSent = await this.mail.sendOtpEmail(email, otp, {
+      recipientName: dto.name.trim(),
+      organizationName: organization.name,
+    });
 
     return {
-      message: 'Registration successful. Please check your email for a verification code.',
+      message: emailSent
+        ? 'Registration successful. Please check your email for a verification code.'
+        : 'Registration successful, but we were unable to send the verification email. Use "Resend code" on the next screen to try again.',
       organizationId: organization.id,
       userId,
+      emailSent,
     };
   }
 

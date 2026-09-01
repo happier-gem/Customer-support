@@ -264,7 +264,7 @@ function buildQuery(params: object): string {
 
 export const api = {
   registerCustomer: (body: { joinToken: string; name: string; email: string; password: string }) =>
-    request<{ message: string; organizationId: string; userId: string }>("/auth/register-customer", {
+    request<{ message: string; organizationId: string; userId: string; emailSent: boolean }>("/auth/register-customer", {
       method: "POST",
       body: JSON.stringify(body),
     }),

@@ -22,8 +22,10 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      await api.register({ organizationName, name, email, password });
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      const result = await api.register({ organizationName, name, email, password });
+      const params = new URLSearchParams({ email });
+      if (!result.emailSent) params.set("emailSent", "0");
+      router.push(`/verify-email?${params.toString()}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
       setLoading(false);

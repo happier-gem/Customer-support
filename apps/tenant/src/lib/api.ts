@@ -339,7 +339,7 @@ function authHeader(accessToken: string): Record<string, string> {
 
 export const api = {
   register: (body: { organizationName: string; name: string; email: string; password: string }) =>
-    request<{ message: string; organizationId: string; userId: string }>("/auth/register", {
+    request<{ message: string; organizationId: string; userId: string; emailSent: boolean }>("/auth/register", {
       method: "POST",
       body: JSON.stringify(body),
     }),

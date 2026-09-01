@@ -48,8 +48,10 @@ export default function JoinByTokenPage() {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      await api.registerCustomer({ joinToken: preview.joinToken, name, email, password });
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      const result = await api.registerCustomer({ joinToken: preview.joinToken, name, email, password });
+      const params = new URLSearchParams({ email });
+      if (!result.emailSent) params.set("emailSent", "0");
+      router.push(`/verify-email?${params.toString()}`);
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
