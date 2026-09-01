@@ -16,6 +16,7 @@ import { LandingNav } from "@/components/landing/landing-nav";
 import { DashboardMockup } from "@/components/landing/dashboard-mockup";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { cardClass } from "@/lib/ui";
+import { SITE_URLS } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Customer Support & Feedback Platform",
@@ -83,26 +84,40 @@ const STEPS = [
   },
 ];
 
-const ROLES = [
+/**
+ * Each role's authentication lives in its own separately-deployed app (see
+ * lib/site-config.ts) — this is the actual routing table for "choose your
+ * role", not just descriptive copy. Company Owner is this app itself, so it
+ * uses an internal route instead of a round-trip through its own external URL.
+ */
+const ROLE_ENTRY_POINTS = [
   {
     icon: Crown,
     title: "Platform Admin",
-    description: "Manages tenants, subscriptions, platform-level statistics, and organization suspension/reactivation.",
+    description: "Manage the entire SaaS platform, organizations and subscription plans.",
+    href: `${SITE_URLS.admin}/login`,
+    internal: false,
   },
   {
     icon: Building2,
-    title: "Tenant Owner",
-    description: "Manages the organization's settings, team members, subscription, tickets, feedback, and reports.",
+    title: "Company Owner",
+    description: "Manage your organization, team, tickets, feedback and subscription.",
+    href: "/login",
+    internal: true,
   },
   {
     icon: Headset,
     title: "Support Agent",
-    description: "Works with customer tickets, responds to customers, and updates ticket status.",
+    description: "View, manage and respond to customer support tickets.",
+    href: `${SITE_URLS.support}/login`,
+    internal: false,
   },
   {
     icon: User,
     title: "Customer",
-    description: "Creates and submits support requests, provides feedback, and views their own ticket history.",
+    description: "Submit tickets, provide feedback and view your ticket history.",
+    href: `${SITE_URLS.customer}/login`,
+    internal: false,
   },
 ];
 
@@ -179,6 +194,47 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Role-based entry point — the actual "choose your role" gateway into the platform */}
+        <section id="get-started" className="border-y border-border bg-card">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-foreground">How would you like to continue?</h2>
+              <p className="mt-3 text-muted-foreground">
+                Each role has its own dedicated application. Choose yours to sign in — you&apos;ll authenticate there
+                with your own account.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {ROLE_ENTRY_POINTS.map((role) => {
+                const cardClassName =
+                  "group flex flex-col rounded-xl border border-border bg-background p-6 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md";
+                const content = (
+                  <>
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10">
+                      <role.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold text-foreground">{role.title}</h3>
+                    <p className="mt-2 flex-1 text-sm text-muted-foreground">{role.description}</p>
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                      Continue
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </>
+                );
+                return role.internal ? (
+                  <Link key={role.title} href={role.href} className={cardClassName}>
+                    {content}
+                  </Link>
+                ) : (
+                  <a key={role.title} href={role.href} className={cardClassName}>
+                    {content}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* Features */}
         <section id="features" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
@@ -220,28 +276,6 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* Role-based access */}
-        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">Built for every role</h2>
-            <p className="mt-3 text-muted-foreground">
-              Four roles, each with exactly the access they need — nothing more.
-            </p>
-          </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {ROLES.map((role) => (
-              <div
-                key={role.title}
-                className={`${cardClass} transition-transform duration-200 hover:-translate-y-1 hover:shadow-md`}
-              >
-                <role.icon className="h-6 w-6 text-primary" />
-                <h3 className="mt-4 text-base font-semibold text-foreground">{role.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{role.description}</p>
-              </div>
-            ))}
           </div>
         </section>
 
