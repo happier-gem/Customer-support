@@ -175,14 +175,14 @@ export default function LandingPage() {
               </p>
               <div className="fade-up mt-8 flex flex-wrap gap-3" style={{ animationDelay: "0.15s" }}>
                 <Link
-                  href="/register"
+                  href={`${SITE_URLS.tenant}/register`}
                   className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
                 >
                   Get Started
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href="/login"
+                  href={`${SITE_URLS.tenant}/login`}
                   className="inline-flex items-center rounded-md border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Sign In
@@ -314,7 +314,7 @@ export default function LandingPage() {
                     ))}
                   </ul>
                   <Link
-                    href="/register"
+                    href={`${SITE_URLS.tenant}/register`}
                     className={`mt-8 rounded-md px-4 py-2.5 text-center text-sm font-medium shadow-sm transition-colors ${
                       plan.highlighted
                         ? "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -383,13 +383,13 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
-                href="/register"
+                href={`${SITE_URLS.tenant}/register`}
                 className="rounded-md bg-background px-5 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-background/90"
               >
                 Create Your Organization
               </Link>
               <Link
-                href="/login"
+                href={`${SITE_URLS.tenant}/login`}
                 className="rounded-md border border-primary-foreground/30 px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-foreground/10"
               >
                 Sign In
