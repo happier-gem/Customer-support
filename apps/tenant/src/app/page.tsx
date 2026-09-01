@@ -87,8 +87,10 @@ const STEPS = [
 /**
  * Each role's authentication lives in its own separately-deployed app (see
  * lib/site-config.ts) — this is the actual routing table for "choose your
- * role", not just descriptive copy. Company Owner is this app itself, so it
- * uses an internal route instead of a round-trip through its own external URL.
+ * role", not just descriptive copy. All four, including Company Owner,
+ * point at TENANT_URL/etc + "/login" explicitly rather than just the bare
+ * app URL — the bare URL now resolves to this landing page (root "/"), not
+ * the login form, so omitting "/login" would just bounce the user back here.
  */
 const ROLE_ENTRY_POINTS = [
   {
@@ -102,8 +104,8 @@ const ROLE_ENTRY_POINTS = [
     icon: Building2,
     title: "Company Owner",
     description: "Manage your organization, team, tickets, feedback and subscription.",
-    href: "/login",
-    internal: true,
+    href: `${SITE_URLS.tenant}/login`,
+    internal: false,
   },
   {
     icon: Headset,
