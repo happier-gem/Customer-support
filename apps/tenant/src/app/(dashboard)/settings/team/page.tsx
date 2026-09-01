@@ -42,6 +42,7 @@ export default function TeamSettingsPage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteLimitReached, setInviteLimitReached] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  const [inviteEmailFailed, setInviteEmailFailed] = useState<string | null>(null);
 
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
@@ -92,11 +93,21 @@ export default function TeamSettingsPage() {
     setInviteError(null);
     setInviteLimitReached(false);
     setInviteSuccess(null);
+    setInviteEmailFailed(null);
     setInviting(true);
     try {
       const created = await api.inviteMember(accessToken, { email: inviteEmail, role: inviteRole });
       setInviteUrls((prev) => ({ ...prev, [created.id]: created.inviteUrl }));
-      setInviteSuccess(`Invitation sent to ${inviteEmail}.`);
+      // The invitation record itself is always created at this point — but
+      // that's not the same as the email actually reaching the invitee, so
+      // don't claim "sent" unless the provider actually accepted it.
+      if (created.emailSent) {
+        setInviteSuccess(`Invitation sent to ${inviteEmail}.`);
+      } else {
+        setInviteEmailFailed(
+          `The invitation was created, but we couldn't send the email to ${inviteEmail}. Use "Copy link" below to share it manually.`,
+        );
+      }
       setInviteEmail("");
       await loadData();
     } catch (err) {
@@ -126,6 +137,9 @@ export default function TeamSettingsPage() {
     try {
       const resent = await api.resendInvitation(accessToken, id);
       setInviteUrls((prev) => ({ ...prev, [resent.id]: resent.inviteUrl }));
+      if (!resent.emailSent) {
+        setRowError(`Couldn't send the invitation email to ${resent.email}. Use "Copy link" to share it manually.`);
+      }
       await loadData();
     } catch (err) {
       setRowError(err instanceof ApiError ? err.message : "Failed to resend invitation.");
@@ -246,6 +260,11 @@ export default function TeamSettingsPage() {
             </p>
           )}
           {inviteSuccess && <p className={successTextClass}>{inviteSuccess}</p>}
+          {inviteEmailFailed && (
+            <p className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+              {inviteEmailFailed}
+            </p>
+          )}
         </form>
 
         {loadError && <p className={errorTextClass}>{loadError}</p>}

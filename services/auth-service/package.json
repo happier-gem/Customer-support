@@ -35,6 +35,7 @@
     "class-validator": "^0.14.1",
     "nodemailer": "9.0.5",
     "reflect-metadata": "^0.2.2",
+    "resend": "^6.25.0",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
@@ -56,17 +57,27 @@
     "typescript": "^5.7.2"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "maxWorkers": 1,
-    "setupFiles": ["<rootDir>/../jest.setup-env.js"],
-    "transform": { "^.+\\.ts$": "ts-jest" },
+    "setupFiles": [
+      "<rootDir>/../jest.setup-env.js"
+    ],
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
     "moduleNameMapper": {
       "^@app/shared$": "<rootDir>/../../../packages/shared/src",
       "^@app/shared/(.*)$": "<rootDir>/../../../packages/shared/src/$1"
     },
-    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }

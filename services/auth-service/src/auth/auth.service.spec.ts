@@ -71,7 +71,7 @@ describe('AuthService (integration)', () => {
   });
 
   async function registerAndGetOtp(overrides: Partial<typeof baseRegisterDto> = {}) {
-    const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+    const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue(true);
     const dto = { ...baseRegisterDto, ...overrides };
     const result = await authService.register(dto);
     // Registration's email send is fire-and-forget (not awaited by
@@ -197,7 +197,7 @@ describe('AuthService (integration)', () => {
 
     it('creates the customer under the organization the join token resolves to', async () => {
       const { org, joinToken } = await makeOwnerAndJoinToken();
-      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue(true);
 
       const result = await authService.registerCustomer({
         joinToken,
@@ -238,7 +238,7 @@ describe('AuthService (integration)', () => {
     it("a join token never lets a customer land in the wrong organization", async () => {
       const { org: orgBeta, joinToken } = await makeOwnerAndJoinToken('Beta Inc');
       await makeOwnerAndJoinToken('Delta Co'); // a second org exists, proving the token is org-specific
-      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue(true);
 
       const result = await authService.registerCustomer({
         joinToken,
@@ -252,7 +252,7 @@ describe('AuthService (integration)', () => {
 
     it('re-registering the same unverified customer email for the SAME organization does not create a second account', async () => {
       const { org, joinToken } = await makeOwnerAndJoinToken();
-      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue(true);
 
       const first = await authService.registerCustomer({ joinToken, name: 'Casey', email: 'retry@beta.test', password: 'CustomerPass123' });
       const second = await authService.registerCustomer({ joinToken, name: 'Casey', email: 'retry@beta.test', password: 'CustomerPass123' });
@@ -266,7 +266,7 @@ describe('AuthService (integration)', () => {
     it('rejects re-registering the same unverified customer email under a DIFFERENT organization’s join token', async () => {
       const { joinToken: betaToken } = await makeOwnerAndJoinToken('Beta Inc');
       const { joinToken: deltaToken } = await makeOwnerAndJoinToken('Delta Co');
-      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+      jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue(true);
 
       await authService.registerCustomer({ joinToken: betaToken, name: 'Casey', email: 'cross-org@test.dev', password: 'CustomerPass123' });
 
@@ -282,7 +282,7 @@ describe('AuthService (integration)', () => {
 
     it('rejects re-registration once the customer account is verified', async () => {
       const { joinToken } = await makeOwnerAndJoinToken();
-      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue(true);
 
       await authService.registerCustomer({ joinToken, name: 'Casey', email: 'verified-customer@test.dev', password: 'CustomerPass123' });
       const otp = sendSpy.mock.calls.at(-1)![1];
@@ -383,7 +383,7 @@ describe('AuthService (integration)', () => {
 
       // jest.spyOn on an already-mocked method returns the same mock instance
       // (it doesn't re-wrap), so clear prior calls before isolating the resend's.
-      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue();
+      const sendSpy = jest.spyOn(mail, 'sendOtpEmail').mockResolvedValue(true);
       sendSpy.mockClear();
       const resend = await authService.resendOtp({ email: dto.email });
       expect(resend.retryAfterSeconds).toBeUndefined();
@@ -583,7 +583,7 @@ describe('AuthService (integration)', () => {
     it('resets the password, invalidates the token, and the old password stops working', async () => {
       await registerVerifyAndLogin();
 
-      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue();
+      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue(true);
       await authService.forgotPassword({ email: baseRegisterDto.email });
       const resetUrl = sendSpy.mock.calls[0][1];
       const resetToken = new URL(resetUrl).searchParams.get('token')!;
@@ -609,7 +609,7 @@ describe('AuthService (integration)', () => {
     it('rejects an expired reset token', async () => {
       await registerVerifyAndLogin();
 
-      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue();
+      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue(true);
       await authService.forgotPassword({ email: baseRegisterDto.email });
       const resetUrl = sendSpy.mock.calls[0][1];
       const resetToken = new URL(resetUrl).searchParams.get('token')!;
@@ -628,7 +628,7 @@ describe('AuthService (integration)', () => {
     it('invalidates existing refresh-token sessions on password reset', async () => {
       const { tokens } = await registerVerifyAndLogin();
 
-      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue();
+      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue(true);
       await authService.forgotPassword({ email: baseRegisterDto.email });
       const resetUrl = sendSpy.mock.calls[0][1];
       const resetToken = new URL(resetUrl).searchParams.get('token')!;

@@ -98,13 +98,15 @@ export class InvitationsService {
     });
 
     const inviteUrl = `${this.config.get<string>('FRONTEND_URL')}/invite/accept?token=${token}`;
-    // Fire-and-forget — MailService.sendMail() never rejects (best-effort
-    // side channel, errors are logged internally), so awaiting it here would
-    // only risk this RPC response exceeding the gateway's fixed
-    // CALL_TIMEOUT_MS on a slow SMTP round-trip, for zero correctness benefit.
-    void this.mail.sendInvitationEmail(normalizedEmail, organization.name, role, inviteUrl);
+    // Awaited (unlike the OTP/reset-password sends): the caller here is the
+    // tenant owner, not the invitee, so there's no anti-enumeration reason
+    // to hide a delivery failure from them — they already know exactly who
+    // they invited. Surfacing `emailSent` lets the UI tell them honestly
+    // instead of claiming "sent" for an invitation that was only ever
+    // created in the database.
+    const emailSent = await this.mail.sendInvitationEmail(normalizedEmail, organization.name, role, inviteUrl);
 
-    return { ...toDto(invitation), inviteUrl };
+    return { ...toDto(invitation), inviteUrl, emailSent };
   }
 
   /**

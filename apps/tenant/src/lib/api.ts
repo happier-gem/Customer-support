@@ -96,6 +96,8 @@ export interface Invitation {
 /** Only returned from inviteMember/resendInvitation — a one-time reveal, never present in listInvitations(). */
 export interface CreatedInvitation extends Invitation {
   inviteUrl: string;
+  /** Whether the invitation email was actually delivered — false means only the invite link (above) is usable. */
+  emailSent: boolean;
 }
 
 export interface InvitationPreview {

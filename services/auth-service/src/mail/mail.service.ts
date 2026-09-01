@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 
 interface SendMailOptions {
   to: string;
@@ -65,31 +66,61 @@ function greeting(recipientName?: string): string {
   return recipientName ? `Hi ${recipientName},` : 'Hi,';
 }
 
+/**
+ * Three-tier email delivery, checked in this order:
+ *
+ *  1. Resend (RESEND_API_KEY) — HTTPS API, works from any host including
+ *     platforms like Railway whose free tier has no static outbound IP.
+ *     Raw SMTP relaying from such a host to an arbitrary mail server
+ *     routinely times out at the network layer (confirmed here against
+ *     mail.infi-tech.net — Connection timeout, not an auth rejection) since
+ *     there's no IP for the receiving server to allowlist. Preferred
+ *     whenever configured.
+ *  2. SMTP (SMTP_HOST) via nodemailer — kept for local development, where
+ *     outbound SMTP from a developer's own machine isn't blocked the same
+ *     way.
+ *  3. Console logging — no provider configured at all; never silently
+ *     pretends an email was sent.
+ */
+type MailProvider = { kind: 'resend'; client: Resend } | { kind: 'smtp'; transporter: Transporter } | { kind: 'none' };
+
 @Injectable()
 export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
-  private readonly transporter: Transporter | null;
+  private readonly provider: MailProvider;
   private readonly from: string;
 
   constructor(private readonly config: ConfigService) {
-    const host = this.config.get<string>('SMTP_HOST');
-    this.from = this.config.get<string>('SMTP_FROM') ?? 'Customer Support Portal <no-reply@example.com>';
+    const resendApiKey = this.config.get<string>('RESEND_API_KEY');
+    const smtpHost = this.config.get<string>('SMTP_HOST');
 
-    if (host) {
-      this.transporter = nodemailer.createTransport({
-        host,
-        port: this.config.get<number>('SMTP_PORT') ?? 587,
-        auth: this.config.get<string>('SMTP_USER')
-          ? {
-              user: this.config.get<string>('SMTP_USER'),
-              pass: this.config.get<string>('SMTP_PASS'),
-            }
-          : undefined,
-      });
+    if (resendApiKey) {
+      this.provider = { kind: 'resend', client: new Resend(resendApiKey) };
+      // Resend rejects sends from a "from" address on a domain it hasn't
+      // verified for this account — onboarding@resend.dev is Resend's own
+      // pre-verified test sender, usable with no domain setup (delivers to
+      // the account's own verified address until a real domain is added).
+      this.from = this.config.get<string>('RESEND_FROM') ?? 'Customer Support Portal <onboarding@resend.dev>';
+    } else if (smtpHost) {
+      this.from = this.config.get<string>('SMTP_FROM') ?? 'Customer Support Portal <no-reply@example.com>';
+      this.provider = {
+        kind: 'smtp',
+        transporter: nodemailer.createTransport({
+          host: smtpHost,
+          port: this.config.get<number>('SMTP_PORT') ?? 587,
+          auth: this.config.get<string>('SMTP_USER')
+            ? {
+                user: this.config.get<string>('SMTP_USER'),
+                pass: this.config.get<string>('SMTP_PASS'),
+              }
+            : undefined,
+        }),
+      };
     } else {
-      // No SMTP configured: fall back to a development-safe mechanism that
-      // logs the email instead of silently pretending it was delivered.
-      this.transporter = null;
+      // No provider configured: fall back to a development-safe mechanism
+      // that logs the email instead of silently pretending it was delivered.
+      this.from = 'Customer Support Portal <no-reply@example.com>';
+      this.provider = { kind: 'none' };
     }
   }
 
@@ -101,51 +132,87 @@ export class MailService implements OnModuleInit {
    * dev-log path in what looks like a real deployment.
    */
   onModuleInit(): void {
-    const host = this.config.get<string>('SMTP_HOST');
-    if (!host) {
-      if ((this.config.get<string>('NODE_ENV') ?? 'development') === 'production') {
+    const isProduction = (this.config.get<string>('NODE_ENV') ?? 'development') === 'production';
+
+    if (this.provider.kind === 'none') {
+      if (isProduction) {
         this.logger.warn(
-          'SMTP_HOST is not set. Emails will only be logged, never delivered. ' +
-            'Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM to enable real email delivery.',
+          'No email provider configured. Emails will only be logged, never delivered. ' +
+            'Set RESEND_API_KEY (preferred) or SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM to enable real email delivery.',
         );
       }
       return;
     }
-    const user = this.config.get<string>('SMTP_USER');
-    const pass = this.config.get<string>('SMTP_PASS');
-    if (user && !pass) {
-      this.logger.warn('SMTP_USER is set but SMTP_PASS is missing — SMTP authentication will fail.');
-    }
-    if (!this.config.get<string>('SMTP_FROM')) {
-      this.logger.warn('SMTP_FROM is not set — falling back to a generic sender address.');
+
+    if (this.provider.kind === 'smtp') {
+      const user = this.config.get<string>('SMTP_USER');
+      const pass = this.config.get<string>('SMTP_PASS');
+      if (user && !pass) {
+        this.logger.warn('SMTP_USER is set but SMTP_PASS is missing — SMTP authentication will fail.');
+      }
+      if (!this.config.get<string>('SMTP_FROM')) {
+        this.logger.warn('SMTP_FROM is not set — falling back to a generic sender address.');
+      }
     }
   }
 
-  async sendMail(options: SendMailOptions): Promise<void> {
-    if (!this.transporter) {
+  /**
+   * Returns whether the provider actually accepted the message — callers
+   * that need honest success/failure (invitations, resend-code) check this
+   * instead of assuming success just because the DB write that preceded the
+   * send succeeded. Still never throws: a provider failure is reported via
+   * the return value, not an exception, so callers choose whether it's
+   * fatal to their own operation.
+   */
+  async sendMail(options: SendMailOptions): Promise<boolean> {
+    if (this.provider.kind === 'none') {
       this.logger.warn(
-        `[DEV EMAIL - SMTP not configured] To: ${options.to} | Subject: ${options.subject}\n${options.text}`,
+        `[DEV EMAIL - no provider configured] To: ${options.to} | Subject: ${options.subject}\n${options.text}`,
       );
-      return;
+      return false;
     }
 
     try {
-      await this.transporter.sendMail({
-        from: this.from,
-        to: options.to,
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
-      });
+      let messageId: string | undefined;
+
+      if (this.provider.kind === 'resend') {
+        const { data, error } = await this.provider.client.emails.send({
+          from: this.from,
+          to: options.to,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        });
+        // Resend's SDK reports API-level failures via this `error` field
+        // rather than throwing — must be checked explicitly or a failed
+        // send would silently look identical to a successful one.
+        if (error) throw new Error(`${error.name}: ${error.message}`);
+        messageId = data?.id;
+      } else {
+        const info = await this.provider.transporter.sendMail({
+          from: this.from,
+          to: options.to,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        });
+        messageId = info.messageId;
+      }
+
+      // Safe diagnostic logging (Step 6): recipient, subject, and the
+      // provider's own message id — never the email body, so a reset/OTP
+      // email's code/link never lands in logs.
+      this.logger.log(`Email sent to ${options.to} | Subject: ${options.subject} | messageId: ${messageId}`);
+      return true;
     } catch (err) {
-      // Email is a best-effort side channel: the account/token/etc. that
-      // triggered this send has already been committed to the database by
-      // the caller, so a transient SMTP failure must not fail the request
-      // and strand the record with no way to retry (e.g. a repeat
-      // registration attempt would just hit "email already exists"). The
-      // failure is still fully visible in logs (Step 2), just not surfaced
-      // as an HTTP error to the caller.
+      // Still never throws — the account/token/etc. that triggered this
+      // send has already been committed to the database by the caller, so
+      // this must not itself abort that caller's request. The failure is
+      // fully visible in logs (Step 2) *and* in the boolean return value,
+      // so a caller that cares (invitations, resend-code) can act on it
+      // instead of it being silently swallowed.
       this.logger.error(`Failed to send email to ${options.to}: ${(err as Error).message}`, (err as Error).stack);
+      return false;
     }
   }
 
@@ -157,13 +224,17 @@ export class MailService implements OnModuleInit {
    * message that carries their verification code, without a second,
    * duplicate send path.
    */
-  async sendOtpEmail(to: string, otp: string, options?: { recipientName?: string; organizationName?: string }): Promise<void> {
+  async sendOtpEmail(
+    to: string,
+    otp: string,
+    options?: { recipientName?: string; organizationName?: string },
+  ): Promise<boolean> {
     const orgLine = options?.organizationName
       ? `<p>You're verifying your account to join <strong>${options.organizationName}</strong>'s support portal.</p>`
       : '';
     const orgText = options?.organizationName ? `You're verifying your account to join ${options.organizationName}'s support portal.\n` : '';
 
-    await this.sendMail({
+    return this.sendMail({
       to,
       subject: 'Your verification code',
       text: `${greeting(options?.recipientName)}\n\n${orgText}Your verification code is ${otp}. It expires in 10 minutes and can only be used once.\n\nIf you didn't request this, you can ignore this email.`,
@@ -178,8 +249,8 @@ export class MailService implements OnModuleInit {
     });
   }
 
-  async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
-    await this.sendMail({
+  async sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean> {
+    return this.sendMail({
       to,
       subject: 'Reset your password',
       text: `We received a request to reset your password. Visit: ${resetUrl}\nThis link will expire soon. If you did not request this, you can ignore this email.`,
@@ -199,9 +270,9 @@ export class MailService implements OnModuleInit {
     role: string,
     inviteUrl: string,
     options?: { recipientName?: string },
-  ): Promise<void> {
+  ): Promise<boolean> {
     const roleLabel = role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-    await this.sendMail({
+    return this.sendMail({
       to,
       subject: `You've been invited to join ${organizationName}`,
       text: `${greeting(options?.recipientName)}\n\nYou've been invited to join ${organizationName} as a ${roleLabel}. Accept your invitation: ${inviteUrl}\nThis link will expire, and can only be used once.`,

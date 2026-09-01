@@ -33,4 +33,12 @@ export interface InvitationPreviewDto {
  */
 export interface CreatedInvitationDto extends InvitationDto {
   inviteUrl: string;
+  /**
+   * Whether the invitation email provider actually accepted the message —
+   * the invitation row above is always created regardless, so this is the
+   * only signal that distinguishes "sent" from "created but never
+   * delivered." false does not mean the invitation is invalid: `inviteUrl`
+   * is still valid and can be shared manually.
+   */
+  emailSent: boolean;
 }
