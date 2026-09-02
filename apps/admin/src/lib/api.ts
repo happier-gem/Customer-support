@@ -27,7 +27,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const message = Array.isArray(data?.message) ? data.message.join(", ") : (data?.message ?? "Something went wrong. Please try again.");
+    let message = Array.isArray(data?.message) ? data.message.join(", ") : (data?.message ?? "Something went wrong. Please try again.");
+    // "Unauthorized" (verbatim) is Passport's own default message, thrown
+    // whenever the access token itself fails verification (expired,
+    // malformed, missing) — never anything this app's backend code writes
+    // itself (a wrong password returns "Invalid email or password"; a real
+    // permission problem returns "You do not have permission..."). Showing
+    // that raw string to a user is meaningless; the actual fix is a fresh
+    // session, not "retry the exact same action."
+    if (res.status === 401 && message === "Unauthorized") {
+      message = "Your session has expired. Please refresh the page and sign in again.";
+    }
     throw new ApiError(message, res.status);
   }
 
