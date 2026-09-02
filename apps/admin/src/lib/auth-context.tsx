@@ -21,6 +21,7 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const ACCESS_DENIED_MESSAGE = "This portal is for platform administrators only.";
+const SILENT_REFRESH_INTERVAL_MS = 10 * 60_000;
 
 /**
  * Step 22: after any successful authentication (session restore or fresh login), the
@@ -61,6 +62,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Only ever needs to run once on mount to attempt silent session restore via the refresh cookie.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Access tokens are short-lived (JWT_ACCESS_EXPIRES_IN, 15m in production —
+  // see services/auth-service/.env) so that a stolen one is only useful
+  // briefly. Without a proactive refresh, any tab left open past that window
+  // starts throwing a raw "Unauthorized" on the next request with no
+  // recovery except a full page reload. Refreshing well before expiry
+  // (10m, a 5-minute safety margin) keeps the token perpetually valid for
+  // as long as the refresh cookie itself lasts.
+  useEffect(() => {
+    if (state.status !== "authenticated") return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.refresh();
+        if (!res.accessToken) {
+          setState({ user: null, accessToken: null, status: "unauthenticated" });
+          return;
+        }
+        // Swap the token in place — deliberately doesn't re-fetch /auth/me
+        // or touch `user`, so this silent background refresh can't cause a
+        // visible flicker in whatever the user is looking at.
+        setState((s) => (s.status === "authenticated" ? { ...s, accessToken: res.accessToken! } : s));
+      } catch {
+        // A transient network blip here shouldn't sign the user out — the
+        // next interval tick (or the next 401, if the refresh cookie has
+        // actually expired) will resolve it one way or the other.
+      }
+    }, SILENT_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [state.status]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.login({ email, password });
