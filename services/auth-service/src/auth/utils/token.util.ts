@@ -1,6 +1,6 @@
 import { randomBytes, randomInt, createHash, timingSafeEqual } from 'crypto';
 
-/** Generates a high-entropy, URL-safe token to email to the user (invitation / password reset links). */
+/** Generates a high-entropy, URL-safe token to email to the user (invitation links; also used for the JWT refresh token's `jti`). */
 export function generateSecureToken(): string {
   return randomBytes(32).toString('hex');
 }

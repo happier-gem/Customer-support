@@ -53,7 +53,7 @@ function toPublicUser(user: User): PublicUser {
 
 const GENERIC_AUTH_ERROR = 'Invalid email or password';
 const GENERIC_TOKEN_ERROR = 'Invalid or expired token';
-const GENERIC_FORGOT_PASSWORD_MESSAGE = 'If an account with that email exists, a password reset link has been sent.';
+const GENERIC_FORGOT_PASSWORD_MESSAGE = 'If an account with that email exists, a password reset code has been sent.';
 
 // Phase 10: OTP-based registration email verification (replaces the old
 // link-token flow — see the User model comment in schema.prisma).
