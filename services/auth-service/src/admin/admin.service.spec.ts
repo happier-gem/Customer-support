@@ -431,7 +431,7 @@ describe('AdminService (integration — platform-admin authorization + cross-ten
       for (const user of result.data) {
         expect(user).not.toHaveProperty('passwordHash');
         expect(user).not.toHaveProperty('emailVerificationOtpHash');
-        expect(user).not.toHaveProperty('passwordResetTokenHash');
+        expect(user).not.toHaveProperty('passwordResetOtpHash');
         expect(user).not.toHaveProperty('refreshTokenHash');
       }
     });

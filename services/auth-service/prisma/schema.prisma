@@ -132,8 +132,9 @@ model User {
   /// the hash-only-at-rest convention used for password reset below. Single-use:
   /// cleared on success. `emailVerificationOtpAttempts` caps brute-force guesses
   /// per issued code (see AuthService.verifyEmail); `emailVerificationOtpLastSentAt`
-  /// drives the resend cooldown (see AuthService.resendOtp). Password reset keeps
-  /// its own separate link-token flow below — unrelated to registration OTP.
+  /// drives the resend cooldown (see AuthService.resendOtp). Password reset uses
+  /// the same 6-digit-code shape below, not its own link-token flow anymore —
+  /// see AuthService.forgotPassword/resetPassword.
   emailVerificationOtpHash       String?
   emailVerificationOtpExpiresAt  DateTime?
   emailVerificationOtpAttempts   Int       @default(0)
@@ -141,8 +142,13 @@ model User {
 
   refreshTokenHash String?
 
-  passwordResetTokenHash String?
-  passwordResetExpiresAt DateTime?
+  /// Password reset, now a 6-digit code (like the fields above) rather than
+  /// a link-embedded token — a returning user enters it on the same app
+  /// they requested it from, so (unlike a link) it never has to guess which
+  /// of the four separately-deployed frontends to point at.
+  passwordResetOtpHash     String?
+  passwordResetExpiresAt   DateTime?
+  passwordResetOtpAttempts Int       @default(0)
 
   /// Phase 10: optional profile picture, served the same public-static way
   /// as Organization.logoUrl (non-sensitive display image, uploaded via the
@@ -166,7 +172,6 @@ model User {
   notifications Notification[] @relation("NotificationRecipient")
 
   @@index([organizationId])
-  @@index([passwordResetTokenHash])
   @@map("users")
 }
 

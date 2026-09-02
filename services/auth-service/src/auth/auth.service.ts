@@ -86,27 +86,6 @@ export class AuthService {
     return (this.config.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d') as StringValue;
   }
 
-  /**
-   * Each role's password-reset page lives on its own separately-deployed
-   * app — apps/admin has none at all (Platform Admin accounts are seeded,
-   * not self-service, so it falls back to FRONTEND_URL below rather than a
-   * broken dedicated URL). A single hardcoded FRONTEND_URL for every role
-   * previously sent every reset email to the Tenant Portal regardless of
-   * the account's actual role — a Customer or Support Agent resetting
-   * their password landed on the wrong app entirely.
-   */
-  private resolveFrontendUrl(role: string): string {
-    const tenantUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3003';
-    switch (role) {
-      case ROLES.CUSTOMER:
-        return this.config.get<string>('CUSTOMER_APP_URL') ?? tenantUrl;
-      case ROLES.SUPPORT_AGENT:
-        return this.config.get<string>('SUPPORT_APP_URL') ?? tenantUrl;
-      default:
-        return tenantUrl;
-    }
-  }
-
   private async signTokenPair(user: User): Promise<TokenPair> {
     const accessToken = await this.jwt.signAsync(
       {
@@ -554,35 +533,59 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email } });
 
     if (user) {
-      const resetToken = generateSecureToken();
-      const resetTokenHash = hashToken(resetToken);
+      const code = generateOtp();
+      const codeHash = hashToken(code);
       const expiresInMinutes = Number(this.config.get<string>('PASSWORD_RESET_EXPIRES_IN_MINUTES') ?? 30);
       const passwordResetExpiresAt = new Date(Date.now() + expiresInMinutes * 60_000);
 
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { passwordResetTokenHash: resetTokenHash, passwordResetExpiresAt },
+        data: { passwordResetOtpHash: codeHash, passwordResetExpiresAt, passwordResetOtpAttempts: 0 },
       });
 
-      const resetUrl = `${this.resolveFrontendUrl(user.role)}/reset-password?token=${resetToken}`;
-      void this.mail.sendPasswordResetEmail(email, resetUrl);
+      // A code the user types on whichever app they're already on beats a
+      // link: unlike a link embedded in the email, it never has to guess
+      // which of the four separately-deployed frontends to point at, and a
+      // repeat forgotPassword() call (the reset-password page's own "Resend
+      // code") naturally issues a fresh code the same way a fresh /register
+      // OTP does.
+      void this.mail.sendPasswordResetOtpEmail(email, code);
     }
 
     return { message: GENERIC_FORGOT_PASSWORD_MESSAGE };
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    const tokenHash = hashToken(dto.token);
-    const user = await this.prisma.user.findFirst({ where: { passwordResetTokenHash: tokenHash } });
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
 
-    if (!user || !user.passwordResetExpiresAt) {
+    // Same generic error whether the account doesn't exist, has no reset
+    // pending, the code is wrong, or it's expired — mirrors verifyEmail()'s
+    // anti-enumeration guarantee (Step 18).
+    if (!user || !user.passwordResetOtpHash || !user.passwordResetExpiresAt) {
+      throw new BadRequestException(GENERIC_TOKEN_ERROR);
+    }
+
+    if (user.passwordResetOtpAttempts >= OTP_MAX_ATTEMPTS) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordResetOtpHash: null, passwordResetExpiresAt: null, passwordResetOtpAttempts: 0 },
+      });
       throw new BadRequestException(GENERIC_TOKEN_ERROR);
     }
 
     if (user.passwordResetExpiresAt.getTime() < Date.now()) {
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { passwordResetTokenHash: null, passwordResetExpiresAt: null },
+        data: { passwordResetOtpHash: null, passwordResetExpiresAt: null, passwordResetOtpAttempts: 0 },
+      });
+      throw new BadRequestException(GENERIC_TOKEN_ERROR);
+    }
+
+    if (!safeCompareHex(hashToken(dto.code), user.passwordResetOtpHash)) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordResetOtpAttempts: { increment: 1 } },
       });
       throw new BadRequestException(GENERIC_TOKEN_ERROR);
     }
@@ -593,8 +596,9 @@ export class AuthService {
       where: { id: user.id },
       data: {
         passwordHash,
-        passwordResetTokenHash: null,
+        passwordResetOtpHash: null,
         passwordResetExpiresAt: null,
+        passwordResetOtpAttempts: 0,
         // Invalidate any existing session so the old refresh token stops working too.
         refreshTokenHash: null,
       },

@@ -302,17 +302,23 @@ export class MailService implements OnModuleInit {
     });
   }
 
-  async sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean> {
+  /**
+   * Password reset via a 6-digit code (not a link): the user enters it back
+   * on the same app they requested it from, so unlike an emailed link it
+   * never has to guess which of the four separately-deployed frontends to
+   * point at.
+   */
+  async sendPasswordResetOtpEmail(to: string, code: string): Promise<boolean> {
     return this.sendMail({
       to,
-      subject: 'Reset your password',
-      text: `We received a request to reset your password. Visit: ${resetUrl}\nThis link will expire soon. If you did not request this, you can ignore this email.`,
+      subject: 'Your password reset code',
+      text: `We received a request to reset your password.\n\nYour reset code is ${code}. It expires in 30 minutes and can only be used once.\n\nIf you didn't request this, you can safely ignore this email — your password won't change.`,
       html: wrapTemplate(
-        'Reset your password',
+        `Your password reset code is ${code}`,
         `<p>Hi,</p>
-         <p>We received a request to reset your password. Click the button below to choose a new one.</p>
-         ${ctaButton(resetUrl, 'Reset password')}
-         <p style="color:#6b7280;font-size:13px;">This link will expire soon. If you didn't request a password reset, you can safely ignore this email — your password won't change.</p>`,
+         <p>We received a request to reset your password. Enter this code to continue:</p>
+         <p style="font-size:28px;font-weight:700;letter-spacing:6px;color:${BRAND_COLOR};margin:16px 0;">${code}</p>
+         <p style="color:#6b7280;font-size:13px;">This code expires in 30 minutes and can only be used once. If you didn't request this, you can safely ignore this email — your password won't change.</p>`,
       ),
     });
   }

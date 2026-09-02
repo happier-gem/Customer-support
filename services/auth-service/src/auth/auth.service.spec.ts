@@ -580,15 +580,14 @@ describe('AuthService (integration)', () => {
       expect(existing.message).toBe(nonExisting.message);
     });
 
-    it('resets the password, invalidates the token, and the old password stops working', async () => {
+    it('resets the password, invalidates the code, and the old password stops working', async () => {
       await registerVerifyAndLogin();
 
-      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue(true);
+      const sendSpy = jest.spyOn(mail, 'sendPasswordResetOtpEmail').mockResolvedValue(true);
       await authService.forgotPassword({ email: baseRegisterDto.email });
-      const resetUrl = sendSpy.mock.calls[0][1];
-      const resetToken = new URL(resetUrl).searchParams.get('token')!;
+      const code = sendSpy.mock.calls[0][1];
 
-      await authService.resetPassword({ token: resetToken, newPassword: 'BrandNewPass456' });
+      await authService.resetPassword({ email: baseRegisterDto.email, code, newPassword: 'BrandNewPass456' });
 
       // Old password must immediately stop working.
       await expect(
@@ -600,19 +599,18 @@ describe('AuthService (integration)', () => {
         authService.login({ email: baseRegisterDto.email, password: 'BrandNewPass456' }),
       ).resolves.toBeDefined();
 
-      // The reset token cannot be reused.
+      // The reset code cannot be reused.
       await expect(
-        authService.resetPassword({ token: resetToken, newPassword: 'YetAnotherPass789' }),
+        authService.resetPassword({ email: baseRegisterDto.email, code, newPassword: 'YetAnotherPass789' }),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('rejects an expired reset token', async () => {
+    it('rejects an expired reset code', async () => {
       await registerVerifyAndLogin();
 
-      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue(true);
+      const sendSpy = jest.spyOn(mail, 'sendPasswordResetOtpEmail').mockResolvedValue(true);
       await authService.forgotPassword({ email: baseRegisterDto.email });
-      const resetUrl = sendSpy.mock.calls[0][1];
-      const resetToken = new URL(resetUrl).searchParams.get('token')!;
+      const code = sendSpy.mock.calls[0][1];
 
       const user = await prisma.user.findUnique({ where: { email: baseRegisterDto.email } });
       await prisma.user.update({
@@ -621,19 +619,50 @@ describe('AuthService (integration)', () => {
       });
 
       await expect(
-        authService.resetPassword({ token: resetToken, newPassword: 'BrandNewPass456' }),
+        authService.resetPassword({ email: baseRegisterDto.email, code, newPassword: 'BrandNewPass456' }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects an incorrect code without revealing that the account exists', async () => {
+      await registerVerifyAndLogin();
+
+      jest.spyOn(mail, 'sendPasswordResetOtpEmail').mockResolvedValue(true);
+      await authService.forgotPassword({ email: baseRegisterDto.email });
+
+      await expect(
+        authService.resetPassword({ email: baseRegisterDto.email, code: '000000', newPassword: 'BrandNewPass456' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('locks out further attempts after 5 incorrect codes and requires a fresh forgotPassword request', async () => {
+      await registerVerifyAndLogin();
+
+      jest.spyOn(mail, 'sendPasswordResetOtpEmail').mockResolvedValue(true);
+      await authService.forgotPassword({ email: baseRegisterDto.email });
+
+      for (let i = 0; i < 5; i += 1) {
+        await expect(
+          authService.resetPassword({ email: baseRegisterDto.email, code: '000000', newPassword: 'BrandNewPass456' }),
+        ).rejects.toThrow(BadRequestException);
+      }
+
+      // The 6th attempt is the one that actually observes the lockout and clears the code.
+      await expect(
+        authService.resetPassword({ email: baseRegisterDto.email, code: '000000', newPassword: 'BrandNewPass456' }),
+      ).rejects.toThrow(BadRequestException);
+
+      const user = await prisma.user.findUnique({ where: { email: baseRegisterDto.email } });
+      expect(user?.passwordResetOtpHash).toBeNull();
     });
 
     it('invalidates existing refresh-token sessions on password reset', async () => {
       const { tokens } = await registerVerifyAndLogin();
 
-      const sendSpy = jest.spyOn(mail, 'sendPasswordResetEmail').mockResolvedValue(true);
+      const sendSpy = jest.spyOn(mail, 'sendPasswordResetOtpEmail').mockResolvedValue(true);
       await authService.forgotPassword({ email: baseRegisterDto.email });
-      const resetUrl = sendSpy.mock.calls[0][1];
-      const resetToken = new URL(resetUrl).searchParams.get('token')!;
+      const code = sendSpy.mock.calls[0][1];
 
-      await authService.resetPassword({ token: resetToken, newPassword: 'BrandNewPass456' });
+      await authService.resetPassword({ email: baseRegisterDto.email, code, newPassword: 'BrandNewPass456' });
 
       await expect(authService.refresh(tokens.refreshToken)).rejects.toThrow(UnauthorizedException);
     });
