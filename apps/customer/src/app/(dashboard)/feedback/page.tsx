@@ -64,10 +64,19 @@ export default function CustomerFeedbackPage() {
           <ul className="space-y-3">
             {result.data.map((form) => (
               <li key={form.id}>
-                <Link href={`/feedback/${form.id}`} className={`${cardClass} block space-y-1 hover:border-ring/40`}>
-                  <p className="font-medium text-foreground">{form.title}</p>
-                  {form.description && <p className="text-sm text-muted-foreground">{form.description}</p>}
-                  <p className="text-xs text-muted-foreground">{form.category}</p>
+                <Link
+                  href={`/feedback/${form.id}`}
+                  className={`${cardClass} flex items-center justify-between gap-4 hover:border-ring/40`}
+                >
+                  <div className="min-w-0 space-y-1">
+                    <p className="font-medium text-foreground">{form.title}</p>
+                    {form.description && <p className="text-sm text-muted-foreground">{form.description}</p>}
+                    <p className="text-xs text-muted-foreground">{form.category}</p>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+                    Give feedback
+                    <span aria-hidden="true">&rarr;</span>
+                  </span>
                 </Link>
               </li>
             ))}
