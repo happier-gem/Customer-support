@@ -1,7 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { Transporter } from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 
 interface SendMailOptions {
   to: string;
@@ -67,22 +69,34 @@ function greeting(recipientName?: string): string {
 }
 
 /**
- * Three-tier email delivery, checked in this order:
+ * Four-tier email delivery, checked in this order:
  *
- *  1. Resend (RESEND_API_KEY) — HTTPS API, works from any host including
- *     platforms like Railway whose free tier has no static outbound IP.
- *     Raw SMTP relaying from such a host to an arbitrary mail server
- *     routinely times out at the network layer (confirmed here against
- *     mail.infi-tech.net — Connection timeout, not an auth rejection) since
- *     there's no IP for the receiving server to allowlist. Preferred
- *     whenever configured.
- *  2. SMTP (SMTP_HOST) via nodemailer — kept for local development, where
- *     outbound SMTP from a developer's own machine isn't blocked the same
- *     way.
- *  3. Console logging — no provider configured at all; never silently
+ *  1. SendGrid (SENDGRID_API_KEY) — HTTPS API, and the only tier here that
+ *     can actually reach arbitrary real recipients without a verified
+ *     domain: SendGrid's Single Sender Verification confirms ownership of
+ *     one *sender* address (a link-click, no DNS) and then allows sending
+ *     to any *recipient*. Preferred whenever configured.
+ *  2. Resend (RESEND_API_KEY) — also an HTTPS API (works from hosts like
+ *     Railway that block raw SMTP egress — see the SMTP tier's comment
+ *     below), but in sandbox mode (no verified domain) only delivers to the
+ *     account's own signup address, rejecting every other recipient. Kept
+ *     as a fallback since it was already proven working here.
+ *  3. SMTP (SMTP_HOST) via nodemailer — raw SMTP. Confirmed NOT to work
+ *     from this Railway deployment: two independent tests (a private mail
+ *     server, and Gmail itself) both failed identically — one with instant
+ *     ENETUNREACH on IPv6, the other with a ~2 minute connection timeout on
+ *     IPv4 — meaning Railway blocks outbound SMTP at the network level,
+ *     not that either receiving server rejected the connection. Kept only
+ *     for local development, where a developer's own machine isn't
+ *     blocked the same way.
+ *  4. Console logging — no provider configured at all; never silently
  *     pretends an email was sent.
  */
-type MailProvider = { kind: 'resend'; client: Resend } | { kind: 'smtp'; transporter: Transporter } | { kind: 'none' };
+type MailProvider =
+  | { kind: 'sendgrid' }
+  | { kind: 'resend'; client: Resend }
+  | { kind: 'smtp'; transporter: Transporter }
+  | { kind: 'none' };
 
 @Injectable()
 export class MailService implements OnModuleInit {
@@ -91,10 +105,17 @@ export class MailService implements OnModuleInit {
   private readonly from: string;
 
   constructor(private readonly config: ConfigService) {
+    const sendgridApiKey = this.config.get<string>('SENDGRID_API_KEY');
     const resendApiKey = this.config.get<string>('RESEND_API_KEY');
     const smtpHost = this.config.get<string>('SMTP_HOST');
 
-    if (resendApiKey) {
+    if (sendgridApiKey) {
+      sgMail.setApiKey(sendgridApiKey);
+      this.provider = { kind: 'sendgrid' };
+      // Must exactly match the address that completed Single Sender
+      // Verification in SendGrid — sending from any other address fails.
+      this.from = this.config.get<string>('SENDGRID_FROM') ?? 'Customer Support Portal <no-reply@example.com>';
+    } else if (resendApiKey) {
       this.provider = { kind: 'resend', client: new Resend(resendApiKey) };
       // Resend rejects sends from a "from" address on a domain it hasn't
       // verified for this account — onboarding@resend.dev is Resend's own
@@ -103,18 +124,28 @@ export class MailService implements OnModuleInit {
       this.from = this.config.get<string>('RESEND_FROM') ?? 'Customer Support Portal <onboarding@resend.dev>';
     } else if (smtpHost) {
       this.from = this.config.get<string>('SMTP_FROM') ?? 'Customer Support Portal <no-reply@example.com>';
+      // Railway's containers have no outbound IPv6 route. Node's default DNS
+      // resolution prefers IPv6 when a host publishes both (Gmail's SMTP
+      // servers do), so without this the connection fails fast with
+      // ENETUNREACH on the IPv6 address before ever trying IPv4 — forcing
+      // family 4 skips straight to the address that's actually reachable.
+      // `family` isn't in nodemailer's published types but is a real
+      // SMTPConnection option (passed straight through to the underlying
+      // net.connect()), hence the intersection type instead of `as any`.
+      const smtpOptions: SMTPTransport.Options & { family?: number } = {
+        host: smtpHost,
+        port: this.config.get<number>('SMTP_PORT') ?? 587,
+        auth: this.config.get<string>('SMTP_USER')
+          ? {
+              user: this.config.get<string>('SMTP_USER'),
+              pass: this.config.get<string>('SMTP_PASS'),
+            }
+          : undefined,
+        family: 4,
+      };
       this.provider = {
         kind: 'smtp',
-        transporter: nodemailer.createTransport({
-          host: smtpHost,
-          port: this.config.get<number>('SMTP_PORT') ?? 587,
-          auth: this.config.get<string>('SMTP_USER')
-            ? {
-                user: this.config.get<string>('SMTP_USER'),
-                pass: this.config.get<string>('SMTP_PASS'),
-              }
-            : undefined,
-        }),
+        transporter: nodemailer.createTransport(smtpOptions),
       };
     } else {
       // No provider configured: fall back to a development-safe mechanism
@@ -138,10 +169,16 @@ export class MailService implements OnModuleInit {
       if (isProduction) {
         this.logger.warn(
           'No email provider configured. Emails will only be logged, never delivered. ' +
-            'Set RESEND_API_KEY (preferred) or SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM to enable real email delivery.',
+            'Set SENDGRID_API_KEY (preferred), RESEND_API_KEY, or SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM to enable real email delivery.',
         );
       }
       return;
+    }
+
+    if (this.provider.kind === 'sendgrid' && !this.config.get<string>('SENDGRID_FROM')) {
+      this.logger.warn(
+        'SENDGRID_FROM is not set — falling back to a generic sender address, which will fail unless it matches a Single Sender Verified in SendGrid.',
+      );
     }
 
     if (this.provider.kind === 'smtp') {
@@ -175,7 +212,23 @@ export class MailService implements OnModuleInit {
     try {
       let messageId: string | undefined;
 
-      if (this.provider.kind === 'resend') {
+      if (this.provider.kind === 'sendgrid') {
+        const [response] = await sgMail.send({
+          from: this.from,
+          to: options.to,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        });
+        // @sendgrid/mail throws on a rejected send (caught below), so
+        // reaching here means it was accepted — statusCode is 202
+        // ("Accepted") on success. x-message-id is SendGrid's own id for
+        // this specific send, useful for looking it up in their Activity
+        // Feed if a recipient reports it never arrived.
+        messageId = Array.isArray(response.headers['x-message-id'])
+          ? response.headers['x-message-id'][0]
+          : response.headers['x-message-id'];
+      } else if (this.provider.kind === 'resend') {
         const { data, error } = await this.provider.client.emails.send({
           from: this.from,
           to: options.to,

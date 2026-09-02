@@ -86,6 +86,27 @@ export class AuthService {
     return (this.config.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d') as StringValue;
   }
 
+  /**
+   * Each role's password-reset page lives on its own separately-deployed
+   * app — apps/admin has none at all (Platform Admin accounts are seeded,
+   * not self-service, so it falls back to FRONTEND_URL below rather than a
+   * broken dedicated URL). A single hardcoded FRONTEND_URL for every role
+   * previously sent every reset email to the Tenant Portal regardless of
+   * the account's actual role — a Customer or Support Agent resetting
+   * their password landed on the wrong app entirely.
+   */
+  private resolveFrontendUrl(role: string): string {
+    const tenantUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3003';
+    switch (role) {
+      case ROLES.CUSTOMER:
+        return this.config.get<string>('CUSTOMER_APP_URL') ?? tenantUrl;
+      case ROLES.SUPPORT_AGENT:
+        return this.config.get<string>('SUPPORT_APP_URL') ?? tenantUrl;
+      default:
+        return tenantUrl;
+    }
+  }
+
   private async signTokenPair(user: User): Promise<TokenPair> {
     const accessToken = await this.jwt.signAsync(
       {
@@ -543,7 +564,7 @@ export class AuthService {
         data: { passwordResetTokenHash: resetTokenHash, passwordResetExpiresAt },
       });
 
-      const resetUrl = `${this.config.get<string>('FRONTEND_URL')}/reset-password?token=${resetToken}`;
+      const resetUrl = `${this.resolveFrontendUrl(user.role)}/reset-password?token=${resetToken}`;
       void this.mail.sendPasswordResetEmail(email, resetUrl);
     }
 
